@@ -1,0 +1,89 @@
+
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
+from typing import List, Dict, Any, Optional
+
+def simple_linguistic_features(text: str) -> np.ndarray:
+    if not text:
+        return np.zeros(4, dtype=np.float32)
+    s = text.strip()
+    length = len(s)
+    tokens = [t for t in s.split() if t]
+    uniq_ratio = len(set(tokens)) / max(len(tokens), 1)
+    punct = sum(1 for c in s if c in ".,!?;:")
+    punct_ratio = punct / max(length, 1)
+    digit = sum(1 for c in s if c.isdigit())
+    digit_ratio = digit / max(length, 1)
+    return np.array([length, uniq_ratio, punct_ratio, digit_ratio], dtype=np.float32)
+
+
+def extract_stage2_features(df: pd.DataFrame, embedder, max_msgs: int = 50, max_chars: int = 500) -> np.ndarray:
+    """
+    Uses df['messages'] built from user_post_comment.json (posts/comment_1/comment_2). :contentReference[oaicite:17]{index=17}
+    """
+    rows: List[np.ndarray] = []
+
+    # figure embedding dim once
+    probe_dim = None
+
+    for _, r in df.iterrows():
+        username = (r.get("username") or "").strip()
+        profile = (r.get("profile") or "").strip()
+
+        messages: List[Dict[str, Any]] = r.get("messages") or []
+        # keep last max_msgs (most recent) OR sample; here: most recent
+        messages = messages[-max_msgs:] if len(messages) > max_msgs else messages
+
+        # build embedding texts: message texts + username/profile
+        texts = []
+        ts = []
+
+        for m in messages:
+            t = (m.get("text") or "")[:max_chars].strip()
+            if t:
+                texts.append(t)
+            if m.get("ts") is not None:
+                ts.append(float(m["ts"]))
+
+        if username:
+            texts.append("USERNAME: " + username)
+        if profile:
+            texts.append("PROFILE: " + profile)
+
+        if len(texts) > 0:
+            emb = embedder.encode(texts)
+            if probe_dim is None:
+                probe_dim = emb.shape[1]
+            emb_pool = emb.mean(axis=0).astype(np.float32)
+        else:
+            if probe_dim is None:
+                # fallback default if nothing encoded yet
+                probe_dim = 384
+            emb_pool = np.zeros(probe_dim, dtype=np.float32)
+
+        # linguistic aggregate (on message texts only)
+        if len(messages) > 0:
+            ling = [simple_linguistic_features((m.get("text") or "")) for m in messages]
+            ling_pool = np.mean(np.stack(ling), axis=0).astype(np.float32)
+        else:
+            ling_pool = np.zeros(4, dtype=np.float32)
+
+        # temporal stats
+        if len(ts) >= 2:
+            ts_sorted = np.sort(np.array(ts, dtype=np.float64))
+            deltas = np.diff(ts_sorted)
+            span = max(ts_sorted[-1] - ts_sorted[0], 1.0)
+            rate = len(ts_sorted) / span
+            delta_mean = float(np.mean(deltas))
+            delta_std = float(np.std(deltas))
+        else:
+            rate, delta_mean, delta_std = 0.0, 0.0, 0.0
+
+        temporal = np.array([rate, delta_mean, delta_std], dtype=np.float32)
+
+        feat = np.concatenate([emb_pool, ling_pool, temporal], axis=0)
+        rows.append(feat)
+
+    return np.stack(rows, axis=0)
