@@ -43,7 +43,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. The optimization objective can be switched between F1, AUC, precision, and recall via a config argument
   3. Calibrated thresholds are saved inside TrainedSystem and automatically used in subsequent predict_system() calls
   4. Re-running calibration with SEED=42 produces identical threshold values (reproducibility)
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — Wave 0: Install optuna, create test infrastructure (conftest + 6 test stubs)
+- [ ] 02-02-PLAN.md — Wave 1: Implement calibrate.py and wire into main.py
 
 ### Phase 3: Evaluation
 **Goal**: The system produces a complete, paper-ready evaluation report on the held-out S3 split
@@ -73,6 +76,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Pipeline Integration | 0/TBD | Complete | 2026-03-19 |
-| 2. Threshold Calibration | 0/TBD | Not started | - |
+| 2. Threshold Calibration | 0/2 | In progress | - |
 | 3. Evaluation | 0/TBD | Not started | - |
 | 4. REST API | 0/TBD | Not started | - |
