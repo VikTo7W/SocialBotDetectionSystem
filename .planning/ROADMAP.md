@@ -79,5 +79,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Pipeline Integration | 0/TBD | Complete | 2026-03-19 |
 | 2. Threshold Calibration | 2/2 | Complete    | 2026-03-19 |
-| 3. Evaluation | 1/1 | Complete   | 2026-03-19 |
+| 3. Evaluation | 1/1 | Complete    | 2026-03-19 |
 | 4. REST API | 0/TBD | Not started | - |
