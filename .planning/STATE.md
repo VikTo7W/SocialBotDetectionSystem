@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-01-PLAN.md — FastAPI + uvicorn installed, main.py serializes TrainedSystem, tests/test_api.py has 5 API test stubs.
-last_updated: "2026-03-19T22:22:00.000Z"
+stopped_at: Completed 04-02-PLAN.md — api.py implemented with /predict endpoint; all 5 API tests pass; 26-test full suite green
+last_updated: "2026-03-19T22:30:08.675Z"
 last_activity: "2026-03-19 — Plan 04-01 complete: FastAPI 0.135.1 + uvicorn 0.42.0 installed, joblib.dump added to main.py, 5 integration test stubs created in tests/test_api.py"
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 5
+  completed_plans: 5
   percent: 100
 ---
 
@@ -54,6 +54,7 @@ Progress: [██████████] 100%
 | Phase 02 P02 | 2 | 2 tasks | 2 files |
 | Phase 03-evaluation P01 | 3 min | 2 tasks | 3 files |
 | Phase 04-rest-api P01 | 2 min | 2 tasks | 2 files |
+| Phase 04-rest-api P02 | 3 min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,7 @@ Recent decisions affecting current work:
 - [Phase 03-evaluation]: Routing partition: stage1_exit (no AMR+no S3), stage2_exit (AMR+no S3), stage3_exit (S3 used) — guarantees sum==100% invariant
 - [Phase 04-api]: importlib.reload used in client fixture to ensure MODEL_PATH env var is read before api module initializes (avoids module-level env var resolution before monkeypatch)
 - [Phase 04-api]: joblib.dump placed after evaluate_s3 so serialized system includes calibrated thresholds
+- [Phase 04-api]: Eager module-level joblib.load in addition to lifespan — Starlette 0.52.1 TestClient without with-block does not trigger lifespan, so app.state.system must be set at module load time
 
 ### Pending Todos
 
@@ -87,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T22:22:00.000Z
-Stopped at: Completed 04-01-PLAN.md — FastAPI + uvicorn installed, main.py serializes TrainedSystem, tests/test_api.py has 5 API test stubs.
+Last session: 2026-03-19T22:30:08.672Z
+Stopped at: Completed 04-02-PLAN.md — api.py implemented with /predict endpoint; all 5 API tests pass; 26-test full suite green
 Resume file: None

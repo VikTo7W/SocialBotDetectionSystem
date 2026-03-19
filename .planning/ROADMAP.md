@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Pipeline Integration** - Verify the existing cascade runs end-to-end on real data before calibration begins
 - [x] **Phase 2: Threshold Calibration** - Bayesian optimization of routing thresholds on S2, persisted to TrainedSystem (completed 2026-03-19)
 - [x] **Phase 3: Evaluation** - Full S3 metrics, per-stage breakdown, and routing statistics (completed 2026-03-19)
-- [ ] **Phase 4: REST API** - POST /predict endpoint with schema validation, serving the calibrated system
+- [x] **Phase 4: REST API** - POST /predict endpoint with schema validation, serving the calibrated system (completed 2026-03-19)
 
 ## Phase Details
 
@@ -68,7 +68,7 @@ Plans:
   1. POST /predict with a valid account JSON payload returns {"p_final": <float>, "label": <0|1>} with HTTP 200
   2. The server starts by loading a serialized TrainedSystem from disk and uses it for all requests without retraining
   3. Sending a payload missing required fields returns HTTP 422 with a descriptive validation error
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 04-01-PLAN.md — Install FastAPI + uvicorn, add joblib serialization to main.py, create test stubs
 - [ ] 04-02-PLAN.md — Implement api.py with lifespan model loading, Pydantic validation, /predict endpoint
@@ -83,4 +83,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Pipeline Integration | 0/TBD | Complete | 2026-03-19 |
 | 2. Threshold Calibration | 2/2 | Complete    | 2026-03-19 |
 | 3. Evaluation | 1/1 | Complete    | 2026-03-19 |
-| 4. REST API | 1/2 | In Progress|  |
+| 4. REST API | 2/2 | Complete   | 2026-03-19 |
