@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 
 from botsim24_io import load_users_csv, load_user_post_comment_json, build_account_table
 from botdetector_pipeline import StageThresholds, train_system, predict_system
+from calibrate import calibrate_thresholds
 import numpy as np
 import pandas as pd
 
@@ -98,6 +99,18 @@ if __name__ == "__main__":
         random_state=SEED,
         nodes_total=len(users),
     )
+
+    # --- Threshold Calibration on S2 ---
+    best_th = calibrate_thresholds(
+        system=sys,
+        S2=S2,
+        edges_S2=edges_S2,
+        nodes_total=len(accounts),
+        metric="f1",
+        n_trials=200,
+        seed=SEED,
+    )
+    # sys.th is now updated; predict_system() will use calibrated thresholds
 
     # 5) Final evaluation on S3
     out = predict_system(sys, df=S3, edges_df=edges_S3, nodes_total=len(users))
