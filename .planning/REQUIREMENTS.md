@@ -31,8 +31,8 @@ Already implemented — validated from codebase map.
 ### REST API
 
 - [ ] **API-01**: POST /predict endpoint accepts JSON account data and returns p_final (bot probability) and binary label
-- [ ] **API-02**: API loads a pre-trained and serialized TrainedSystem from disk and routes requests through predict_system()
-- [ ] **API-03**: Input JSON schema is validated against expected account fields before inference
+- [x] **API-02**: API loads a pre-trained and serialized TrainedSystem from disk and routes requests through predict_system()
+- [x] **API-03**: Input JSON schema is validated against expected account fields before inference
 
 ### Evaluation
 
@@ -87,8 +87,8 @@ Already implemented — validated from codebase map.
 | EVAL-02 | Phase 3 (Evaluation) | Complete |
 | EVAL-03 | Phase 3 (Evaluation) | Complete |
 | API-01 | Phase 4 (REST API) | Pending |
-| API-02 | Phase 4 (REST API) | Pending |
-| API-03 | Phase 4 (REST API) | Pending |
+| API-02 | Phase 4 (REST API) | Complete |
+| API-03 | Phase 4 (REST API) | Complete |
 
 **Coverage:**
 - v1 requirements: 21 total (12 validated + 3 calibration + 3 evaluation + 3 API)

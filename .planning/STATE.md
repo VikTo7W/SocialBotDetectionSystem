@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-01-PLAN.md — evaluate.py implemented with evaluate_s3(), main.py wired. Phase 3 Plan 1 complete.
-last_updated: "2026-03-19T21:50:44.180Z"
-last_activity: "2026-03-19 — Plan 02-01 complete: optuna 4.8.0 installed, tests/ scaffold created with conftest.py (minimal_system fixture) and 6 test stubs for calibrate_thresholds"
+stopped_at: Completed 04-01-PLAN.md — FastAPI + uvicorn installed, main.py serializes TrainedSystem, tests/test_api.py has 5 API test stubs.
+last_updated: "2026-03-19T22:22:00.000Z"
+last_activity: "2026-03-19 — Plan 04-01 complete: FastAPI 0.135.1 + uvicorn 0.42.0 installed, joblib.dump added to main.py, 5 integration test stubs created in tests/test_api.py"
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
+  completed_phases: 3
+  total_plans: 4
+  completed_plans: 4
   percent: 100
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-19)
 
 **Core value:** The cascade must produce a single, well-calibrated bot probability per account — routing efficiently through stages while catching sophisticated bots that simple models miss.
-**Current focus:** Phase 2 — Threshold Calibration
+**Current focus:** Phase 4 — REST API
 
 ## Current Position
 
-Phase: 2 of 4 (Threshold Calibration)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-03-19 — Plan 02-01 complete: optuna 4.8.0 installed, tests/ scaffold created with conftest.py (minimal_system fixture) and 6 test stubs for calibrate_thresholds
+Phase: 4 of 4 (REST API)
+Plan: 1 of 1 complete in current phase
+Status: In progress (Plan 02 remaining)
+Last activity: 2026-03-19 — Plan 04-01 complete: FastAPI 0.135.1 + uvicorn 0.42.0 installed, joblib.dump added to main.py, 5 integration test stubs created in tests/test_api.py
 
 Progress: [██████████] 100%
 
@@ -53,6 +53,7 @@ Progress: [██████████] 100%
 *Updated after each plan completion*
 | Phase 02 P02 | 2 | 2 tasks | 2 files |
 | Phase 03-evaluation P01 | 3 min | 2 tasks | 3 files |
+| Phase 04-rest-api P01 | 2 min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ Recent decisions affecting current work:
 - [Phase 02]: n_jobs=1 enforced in calibrate_thresholds for TPESampler seed reproducibility (Optuna requirement)
 - [Phase 03-evaluation]: Plain print() chosen for evaluate.py output — no tabulate/rich deps required
 - [Phase 03-evaluation]: Routing partition: stage1_exit (no AMR+no S3), stage2_exit (AMR+no S3), stage3_exit (S3 used) — guarantees sum==100% invariant
+- [Phase 04-api]: importlib.reload used in client fixture to ensure MODEL_PATH env var is read before api module initializes (avoids module-level env var resolution before monkeypatch)
+- [Phase 04-api]: joblib.dump placed after evaluate_s3 so serialized system includes calibrated thresholds
 
 ### Pending Todos
 
@@ -84,6 +87,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T21:47:47.997Z
-Stopped at: Completed 03-01-PLAN.md — evaluate.py implemented with evaluate_s3(), main.py wired. Phase 3 Plan 1 complete.
+Last session: 2026-03-19T22:22:00.000Z
+Stopped at: Completed 04-01-PLAN.md — FastAPI + uvicorn installed, main.py serializes TrainedSystem, tests/test_api.py has 5 API test stubs.
 Resume file: None
