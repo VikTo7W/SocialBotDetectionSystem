@@ -68,7 +68,10 @@ Plans:
   1. POST /predict with a valid account JSON payload returns {"p_final": <float>, "label": <0|1>} with HTTP 200
   2. The server starts by loading a serialized TrainedSystem from disk and uses it for all requests without retraining
   3. Sending a payload missing required fields returns HTTP 422 with a descriptive validation error
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 04-01-PLAN.md — Install FastAPI + uvicorn, add joblib serialization to main.py, create test stubs
+- [ ] 04-02-PLAN.md — Implement api.py with lifespan model loading, Pydantic validation, /predict endpoint
 
 ## Progress
 
@@ -80,4 +83,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Pipeline Integration | 0/TBD | Complete | 2026-03-19 |
 | 2. Threshold Calibration | 2/2 | Complete    | 2026-03-19 |
 | 3. Evaluation | 1/1 | Complete    | 2026-03-19 |
-| 4. REST API | 0/TBD | Not started | - |
+| 4. REST API | 0/2 | In progress | - |
