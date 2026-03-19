@@ -68,22 +68,33 @@ Already implemented — validated from codebase map.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 through CORE-12 | Phase 1 (Polish & Verify) | Complete — existing |
-| CALIB-01 | Phase 2 | Pending |
-| CALIB-02 | Phase 2 | Pending |
-| CALIB-03 | Phase 2 | Pending |
-| EVAL-01 | Phase 3 | Pending |
-| EVAL-02 | Phase 3 | Pending |
-| EVAL-03 | Phase 3 | Pending |
-| API-01 | Phase 4 | Pending |
-| API-02 | Phase 4 | Pending |
-| API-03 | Phase 4 | Pending |
+| CORE-01 | Phase 1 (Pipeline Integration) | Complete — existing |
+| CORE-02 | Phase 1 (Pipeline Integration) | Complete — existing |
+| CORE-03 | Phase 1 (Pipeline Integration) | Complete — existing |
+| CORE-04 | Phase 1 (Pipeline Integration) | Complete — existing |
+| CORE-05 | Phase 1 (Pipeline Integration) | Complete — existing |
+| CORE-06 | Phase 1 (Pipeline Integration) | Complete — existing |
+| CORE-07 | Phase 1 (Pipeline Integration) | Complete — existing |
+| CORE-08 | Phase 1 (Pipeline Integration) | Complete — existing |
+| CORE-09 | Phase 1 (Pipeline Integration) | Complete — existing |
+| CORE-10 | Phase 1 (Pipeline Integration) | Complete — existing |
+| CORE-11 | Phase 1 (Pipeline Integration) | Complete — existing |
+| CORE-12 | Phase 1 (Pipeline Integration) | Complete — existing |
+| CALIB-01 | Phase 2 (Threshold Calibration) | Pending |
+| CALIB-02 | Phase 2 (Threshold Calibration) | Pending |
+| CALIB-03 | Phase 2 (Threshold Calibration) | Pending |
+| EVAL-01 | Phase 3 (Evaluation) | Pending |
+| EVAL-02 | Phase 3 (Evaluation) | Pending |
+| EVAL-03 | Phase 3 (Evaluation) | Pending |
+| API-01 | Phase 4 (REST API) | Pending |
+| API-02 | Phase 4 (REST API) | Pending |
+| API-03 | Phase 4 (REST API) | Pending |
 
 **Coverage:**
-- v1 requirements: 18 total (12 validated + 3 calibration + 3 API + 3 evaluation)
-- Mapped to phases: 18
+- v1 requirements: 21 total (12 validated + 3 calibration + 3 evaluation + 3 API)
+- Mapped to phases: 21
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-19*
-*Last updated: 2026-03-19 after initial definition*
+*Last updated: 2026-03-19 after roadmap creation — traceability expanded to individual CORE entries*
