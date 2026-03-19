@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from botsim24_io import load_users_csv, load_user_post_comment_json, build_account_table
 from botdetector_pipeline import StageThresholds, train_system, predict_system
 from calibrate import calibrate_thresholds
+from evaluate import evaluate_s3
 import numpy as np
 import pandas as pd
 
@@ -114,11 +115,5 @@ if __name__ == "__main__":
 
     # 5) Final evaluation on S3
     out = predict_system(sys, df=S3, edges_df=edges_S3, nodes_total=len(users))
-    print(out[["account_id", "p_final", "amr_used", "stage3_used"]].head())
-
-    # If you want basic metrics:
-    from sklearn.metrics import classification_report
-
     y_true = S3["label"].to_numpy()
-    y_pred = (out["p_final"].to_numpy() >= 0.5).astype(int)
-    print(classification_report(y_true, y_pred, digits=4))
+    report = evaluate_s3(out, y_true)
