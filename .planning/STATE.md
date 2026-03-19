@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-02-PLAN.md — calibrate.py implemented with Optuna TPE, main.py wired. Phase 2 complete.
-last_updated: "2026-03-19T21:22:25.537Z"
+stopped_at: Completed 03-01-PLAN.md — evaluate.py implemented with evaluate_s3(), main.py wired. Phase 3 Plan 1 complete.
+last_updated: "2026-03-19T21:47:48.001Z"
 last_activity: "2026-03-19 — Plan 02-01 complete: optuna 4.8.0 installed, tests/ scaffold created with conftest.py (minimal_system fixture) and 6 test stubs for calibrate_thresholds"
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
   percent: 100
 ---
 
@@ -52,6 +52,7 @@ Progress: [██████████] 100%
 
 *Updated after each plan completion*
 | Phase 02 P02 | 2 | 2 tasks | 2 files |
+| Phase 03-evaluation P01 | 3 min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,8 @@ Recent decisions affecting current work:
 - 50-account balanced synthetic DataFrame ensures StratifiedKFold(n_splits=5) works without class imbalance
 - [Phase 02]: s2a_bot/s12_bot use dynamic lower bound max(human+0.05, 0.70) to prevent human/bot threshold inversion during Optuna search
 - [Phase 02]: n_jobs=1 enforced in calibrate_thresholds for TPESampler seed reproducibility (Optuna requirement)
+- [Phase 03-evaluation]: Plain print() chosen for evaluate.py output — no tabulate/rich deps required
+- [Phase 03-evaluation]: Routing partition: stage1_exit (no AMR+no S3), stage2_exit (AMR+no S3), stage3_exit (S3 used) — guarantees sum==100% invariant
 
 ### Pending Todos
 
@@ -81,6 +84,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T21:18:59.978Z
-Stopped at: Completed 02-02-PLAN.md — calibrate.py implemented with Optuna TPE, main.py wired. Phase 2 complete.
+Last session: 2026-03-19T21:47:47.997Z
+Stopped at: Completed 03-01-PLAN.md — evaluate.py implemented with evaluate_s3(), main.py wired. Phase 3 Plan 1 complete.
 Resume file: None

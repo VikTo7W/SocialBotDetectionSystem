@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Pipeline Integration** - Verify the existing cascade runs end-to-end on real data before calibration begins
 - [x] **Phase 2: Threshold Calibration** - Bayesian optimization of routing thresholds on S2, persisted to TrainedSystem (completed 2026-03-19)
-- [ ] **Phase 3: Evaluation** - Full S3 metrics, per-stage breakdown, and routing statistics
+- [x] **Phase 3: Evaluation** - Full S3 metrics, per-stage breakdown, and routing statistics (completed 2026-03-19)
 - [ ] **Phase 4: REST API** - POST /predict endpoint with schema validation, serving the calibrated system
 
 ## Phase Details
@@ -56,7 +56,7 @@ Plans:
   1. Running the evaluation script on S3 prints overall F1, AUC, precision, and recall for p_final vs. ground truth
   2. Per-stage metrics (p1 vs. labels, p2 vs. labels, p12 vs. labels, p_final vs. labels) are reported side-by-side
   3. Routing statistics are reported: percentage of accounts exiting at Stage 1, Stage 2, and Stage 3, plus AMR trigger rate
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
 - [ ] 03-01-PLAN.md — Create evaluate.py with evaluate_s3() and wire into main.py
 
@@ -79,5 +79,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Pipeline Integration | 0/TBD | Complete | 2026-03-19 |
 | 2. Threshold Calibration | 2/2 | Complete    | 2026-03-19 |
-| 3. Evaluation | 0/1 | In progress | - |
+| 3. Evaluation | 1/1 | Complete   | 2026-03-19 |
 | 4. REST API | 0/TBD | Not started | - |

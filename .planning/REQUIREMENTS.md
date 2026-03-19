@@ -36,9 +36,9 @@ Already implemented — validated from codebase map.
 
 ### Evaluation
 
-- [ ] **EVAL-01**: End-to-end evaluation on S3 produces F1, AUC, precision, and recall
-- [ ] **EVAL-02**: Per-stage breakdown reports individual stage contributions (p1, p2, p12, p_final vs labels)
-- [ ] **EVAL-03**: Routing statistics reported — percentage of accounts exiting at each stage and percentage with AMR triggered
+- [x] **EVAL-01**: End-to-end evaluation on S3 produces F1, AUC, precision, and recall
+- [x] **EVAL-02**: Per-stage breakdown reports individual stage contributions (p1, p2, p12, p_final vs labels)
+- [x] **EVAL-03**: Routing statistics reported — percentage of accounts exiting at each stage and percentage with AMR triggered
 
 ## v2 Requirements
 
@@ -83,9 +83,9 @@ Already implemented — validated from codebase map.
 | CALIB-01 | Phase 2 (Threshold Calibration) | Complete |
 | CALIB-02 | Phase 2 (Threshold Calibration) | Complete |
 | CALIB-03 | Phase 2 (Threshold Calibration) | Complete |
-| EVAL-01 | Phase 3 (Evaluation) | Pending |
-| EVAL-02 | Phase 3 (Evaluation) | Pending |
-| EVAL-03 | Phase 3 (Evaluation) | Pending |
+| EVAL-01 | Phase 3 (Evaluation) | Complete |
+| EVAL-02 | Phase 3 (Evaluation) | Complete |
+| EVAL-03 | Phase 3 (Evaluation) | Complete |
 | API-01 | Phase 4 (REST API) | Pending |
 | API-02 | Phase 4 (REST API) | Pending |
 | API-03 | Phase 4 (REST API) | Pending |
