@@ -46,7 +46,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 2/2 plans complete
 Plans:
 - [x] 02-01-PLAN.md — Wave 0: Install optuna, create test infrastructure (conftest + 6 test stubs)
-- [ ] 02-02-PLAN.md — Wave 1: Implement calibrate.py and wire into main.py
+- [x] 02-02-PLAN.md — Wave 1: Implement calibrate.py and wire into main.py
 
 ### Phase 3: Evaluation
 **Goal**: The system produces a complete, paper-ready evaluation report on the held-out S3 split
@@ -56,7 +56,9 @@ Plans:
   1. Running the evaluation script on S3 prints overall F1, AUC, precision, and recall for p_final vs. ground truth
   2. Per-stage metrics (p1 vs. labels, p2 vs. labels, p12 vs. labels, p_final vs. labels) are reported side-by-side
   3. Routing statistics are reported: percentage of accounts exiting at Stage 1, Stage 2, and Stage 3, plus AMR trigger rate
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 03-01-PLAN.md — Create evaluate.py with evaluate_s3() and wire into main.py
 
 ### Phase 4: REST API
 **Goal**: A running API endpoint accepts account JSON and returns a calibrated bot probability, suitable for external use
@@ -77,5 +79,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Pipeline Integration | 0/TBD | Complete | 2026-03-19 |
 | 2. Threshold Calibration | 2/2 | Complete    | 2026-03-19 |
-| 3. Evaluation | 0/TBD | Not started | - |
+| 3. Evaluation | 0/1 | In progress | - |
 | 4. REST API | 0/TBD | Not started | - |
