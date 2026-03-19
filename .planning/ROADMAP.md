@@ -17,7 +17,7 @@ calibrated thresholds, and the API wraps the fully-tuned system.
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Pipeline Integration** - Verify the existing cascade runs end-to-end on real data before calibration begins
-- [ ] **Phase 2: Threshold Calibration** - Bayesian optimization of routing thresholds on S2, persisted to TrainedSystem
+- [x] **Phase 2: Threshold Calibration** - Bayesian optimization of routing thresholds on S2, persisted to TrainedSystem (completed 2026-03-19)
 - [ ] **Phase 3: Evaluation** - Full S3 metrics, per-stage breakdown, and routing statistics
 - [ ] **Phase 4: REST API** - POST /predict endpoint with schema validation, serving the calibrated system
 
@@ -43,7 +43,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. The optimization objective can be switched between F1, AUC, precision, and recall via a config argument
   3. Calibrated thresholds are saved inside TrainedSystem and automatically used in subsequent predict_system() calls
   4. Re-running calibration with SEED=42 produces identical threshold values (reproducibility)
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 02-01-PLAN.md — Wave 0: Install optuna, create test infrastructure (conftest + 6 test stubs)
 - [ ] 02-02-PLAN.md — Wave 1: Implement calibrate.py and wire into main.py
@@ -76,6 +76,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Pipeline Integration | 0/TBD | Complete | 2026-03-19 |
-| 2. Threshold Calibration | 1/2 | In progress | - |
+| 2. Threshold Calibration | 2/2 | Complete   | 2026-03-19 |
 | 3. Evaluation | 0/TBD | Not started | - |
 | 4. REST API | 0/TBD | Not started | - |

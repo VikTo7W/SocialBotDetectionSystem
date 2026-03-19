@@ -24,9 +24,9 @@ Already implemented — validated from codebase map.
 
 ### Threshold Calibration
 
-- [ ] **CALIB-01**: System can optimize novelty and probability routing thresholds using Bayesian optimization over the S2 split
-- [ ] **CALIB-02**: Optimization objective is configurable (default: F1; alternatives: AUC, precision, recall)
-- [ ] **CALIB-03**: Calibrated thresholds are persisted as part of TrainedSystem for reproducibility
+- [x] **CALIB-01**: System can optimize novelty and probability routing thresholds using Bayesian optimization over the S2 split
+- [x] **CALIB-02**: Optimization objective is configurable (default: F1; alternatives: AUC, precision, recall)
+- [x] **CALIB-03**: Calibrated thresholds are persisted as part of TrainedSystem for reproducibility
 
 ### REST API
 
@@ -80,9 +80,9 @@ Already implemented — validated from codebase map.
 | CORE-10 | Phase 1 (Pipeline Integration) | Complete — existing |
 | CORE-11 | Phase 1 (Pipeline Integration) | Complete — existing |
 | CORE-12 | Phase 1 (Pipeline Integration) | Complete — existing |
-| CALIB-01 | Phase 2 (Threshold Calibration) | Pending |
-| CALIB-02 | Phase 2 (Threshold Calibration) | Pending |
-| CALIB-03 | Phase 2 (Threshold Calibration) | Pending |
+| CALIB-01 | Phase 2 (Threshold Calibration) | Complete |
+| CALIB-02 | Phase 2 (Threshold Calibration) | Complete |
+| CALIB-03 | Phase 2 (Threshold Calibration) | Complete |
 | EVAL-01 | Phase 3 (Evaluation) | Pending |
 | EVAL-02 | Phase 3 (Evaluation) | Pending |
 | EVAL-03 | Phase 3 (Evaluation) | Pending |

@@ -1,3 +1,19 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: executing
+stopped_at: Completed 02-02-PLAN.md — calibrate.py implemented with Optuna TPE, main.py wired. Phase 2 complete.
+last_updated: "2026-03-19T21:18:59.981Z"
+last_activity: "2026-03-19 — Plan 02-01 complete: optuna 4.8.0 installed, tests/ scaffold created with conftest.py (minimal_system fixture) and 6 test stubs for calibrate_thresholds"
+progress:
+  total_phases: 4
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
+  percent: 100
+---
+
 # Project State
 
 ## Project Reference
@@ -14,7 +30,7 @@ Plan: 1 of 2 in current phase
 Status: In progress
 Last activity: 2026-03-19 — Plan 02-01 complete: optuna 4.8.0 installed, tests/ scaffold created with conftest.py (minimal_system fixture) and 6 test stubs for calibrate_thresholds
 
-Progress: [###░░░░░░░] 30%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -35,6 +51,7 @@ Progress: [###░░░░░░░] 30%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 02 P02 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -50,6 +67,8 @@ Recent decisions affecting current work:
 - FakeEmbedder with RandomState(42) for deterministic 384-dim test embeddings (avoids 90MB model load)
 - monkeypatch botdetector_pipeline extract functions at module level to fix predict_system calling convention bug
 - 50-account balanced synthetic DataFrame ensures StratifiedKFold(n_splits=5) works without class imbalance
+- [Phase 02]: s2a_bot/s12_bot use dynamic lower bound max(human+0.05, 0.70) to prevent human/bot threshold inversion during Optuna search
+- [Phase 02]: n_jobs=1 enforced in calibrate_thresholds for TPESampler seed reproducibility (Optuna requirement)
 
 ### Pending Todos
 
@@ -62,6 +81,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19
-Stopped at: Completed 02-01-PLAN.md — test scaffold installed (optuna 4.8.0, tests/, conftest.py, test_calibrate.py with 6 stubs). Next: Plan 02 implements calibrate.py.
+Last session: 2026-03-19T21:18:59.978Z
+Stopped at: Completed 02-02-PLAN.md — calibrate.py implemented with Optuna TPE, main.py wired. Phase 2 complete.
 Resume file: None
