@@ -1,3 +1,4 @@
+import joblib
 import pandas as pd
 import torch
 from sklearn.model_selection import train_test_split
@@ -117,3 +118,5 @@ if __name__ == "__main__":
     out = predict_system(sys, df=S3, edges_df=edges_S3, nodes_total=len(users))
     y_true = S3["label"].to_numpy()
     report = evaluate_s3(out, y_true)
+    joblib.dump(sys, "trained_system.joblib")
+    print(f"[main] Saved TrainedSystem to trained_system.joblib")
