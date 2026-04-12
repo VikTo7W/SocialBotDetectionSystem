@@ -30,9 +30,19 @@ The cascade must produce a single, well-calibrated bot probability per account �
 - ✓ REST API wrapper — POST /predict endpoint accepting JSON account data, returning p_final + label — v1.0
 - ✓ End-to-end evaluation pipeline — full S3 metrics (F1, AUC, precision/recall) + per-stage breakdown + routing statistics — v1.0
 
+## Current Milestone: v1.1 Feature Leakage Audit & Fix
+
+**Goal:** Identify and remove features causing near-perfect Stage 2a+ performance, producing legitimate paper-ready results.
+
+**Target features:**
+- Per-feature ablation to isolate leaky features at Stage 1 and Stage 2a
+- Remove profile/username text from Stage 2a and AMR embeddings; use content-only features
+- Re-train and re-evaluate the full cascade; confirm scores are realistic
+- Generate paper-ready ablation tables documenting each stage's contribution
+
 ### Active
 
-_(Next milestone requirements go here)_
+_(Requirements defined in REQUIREMENTS.md)_
 
 ### Out of Scope
 
@@ -71,4 +81,4 @@ _(Next milestone requirements go here)_
 | s2a_bot lower bound enforced | Prevents threshold inversion during Bayesian search (bot threshold below human threshold) | ✓ Necessary |
 
 ---
-*Last updated: 2026-04-12 after v1.0 milestone*
+*Last updated: 2026-04-12 after v1.1 milestone start*

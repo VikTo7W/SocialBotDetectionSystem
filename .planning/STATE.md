@@ -1,60 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: executing
-stopped_at: Completed 04-02-PLAN.md — api.py implemented with /predict endpoint; all 5 API tests pass; 26-test full suite green
-last_updated: "2026-04-12T21:32:59.414Z"
-last_activity: "2026-03-19 — Plan 04-01 complete: FastAPI 0.135.1 + uvicorn 0.42.0 installed, joblib.dump added to main.py, 5 integration test stubs created in tests/test_api.py"
+milestone: v1.1
+milestone_name: Feature Leakage Audit & Fix
+status: not_started
+stopped_at: ""
+last_updated: "2026-04-12T00:00:00.000Z"
+last_activity: "2026-04-12 — Milestone v1.1 started"
 progress:
-  total_phases: 4
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-19)
+See: .planning/PROJECT.md (updated 2026-04-12)
 
 **Core value:** The cascade must produce a single, well-calibrated bot probability per account — routing efficiently through stages while catching sophisticated bots that simple models miss.
-**Current focus:** Phase 4 — REST API
+**Current focus:** Phase: Not started (defining requirements)
 
 ## Current Position
 
-Phase: 4 of 4 (REST API)
-Plan: 1 of 1 complete in current phase
-Status: In progress (Plan 02 remaining)
-Last activity: 2026-03-19 — Plan 04-01 complete: FastAPI 0.135.1 + uvicorn 0.42.0 installed, joblib.dump added to main.py, 5 integration test stubs created in tests/test_api.py
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-12 — Milestone v1.1 started
 
-Progress: [██████████] 100%
-
-## Performance Metrics
-
-**Velocity:**
-- Total plans completed: 0 (active phases)
-- Average duration: -
-- Total execution time: -
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 1. Pipeline Integration | - | - | - |
-| 2. Threshold Calibration | 1 completed | 3 min | 3 min |
-
-**Recent Trend:**
-- Last 5 plans: 02-01 (3 min)
-- Trend: -
-
-*Updated after each plan completion*
-| Phase 02 P02 | 2 | 2 tasks | 2 files |
-| Phase 03-evaluation P01 | 3 min | 2 tasks | 3 files |
-| Phase 04-rest-api P01 | 2 min | 2 tasks | 2 files |
-| Phase 04-rest-api P02 | 3 min | 1 tasks | 1 files |
+Progress: [░░░░░░░░░░] 0%
 
 ## Accumulated Context
 
@@ -67,16 +43,7 @@ Recent decisions affecting current work:
 - AMR is a delta-logit updater (Option C) — not a full second classifier
 - Logistic regression for meta-learners — interpretable, calibrated, resistant to overfitting on small S2
 - S1/S2/S3 three-way split — S3 is fully held out; calibration runs on S2 only
-- FakeEmbedder with RandomState(42) for deterministic 384-dim test embeddings (avoids 90MB model load)
-- monkeypatch botdetector_pipeline extract functions at module level to fix predict_system calling convention bug
-- 50-account balanced synthetic DataFrame ensures StratifiedKFold(n_splits=5) works without class imbalance
-- [Phase 02]: s2a_bot/s12_bot use dynamic lower bound max(human+0.05, 0.70) to prevent human/bot threshold inversion during Optuna search
-- [Phase 02]: n_jobs=1 enforced in calibrate_thresholds for TPESampler seed reproducibility (Optuna requirement)
-- [Phase 03-evaluation]: Plain print() chosen for evaluate.py output — no tabulate/rich deps required
-- [Phase 03-evaluation]: Routing partition: stage1_exit (no AMR+no S3), stage2_exit (AMR+no S3), stage3_exit (S3 used) — guarantees sum==100% invariant
-- [Phase 04-api]: importlib.reload used in client fixture to ensure MODEL_PATH env var is read before api module initializes (avoids module-level env var resolution before monkeypatch)
-- [Phase 04-api]: joblib.dump placed after evaluate_s3 so serialized system includes calibrated thresholds
-- [Phase 04-api]: Eager module-level joblib.load in addition to lifespan — Starlette 0.52.1 TestClient without with-block does not trigger lifespan, so app.state.system must be set at module load time
+- [Phase 04-api]: Eager module-level joblib.load in addition to lifespan — Starlette 0.52.1 TestClient without with-block does not trigger lifespan
 
 ### Pending Todos
 
@@ -84,11 +51,5 @@ None yet.
 
 ### Blockers/Concerns
 
-- Current thresholds in StageThresholds are hardcoded defaults (e.g., s1_bot=0.98, n1_max_for_exit=3.0) — calibration will replace these
-- AMR linearization is a stub (embedding approximation, not true AMR graph parsing) — documented as v2 work
-
-## Session Continuity
-
-Last session: 2026-03-19T22:30:08.672Z
-Stopped at: Completed 04-02-PLAN.md — api.py implemented with /predict endpoint; all 5 API tests pass; 26-test full suite green
-Resume file: None
+- Stage 2a+ evaluation metrics suspiciously near 97-100%; suspected cause: profile/username text in Stage 2a features encoding label directly (bots have AI-generated descriptions, humans have organic descriptions)
+- AMR refiner also uses profile text (text_field="profile"), compounding the issue
