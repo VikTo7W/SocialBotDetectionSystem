@@ -1,7 +1,7 @@
 # Requirements: Social Bot Detection System
 
 **Defined:** 2026-03-19
-**Updated:** 2026-04-12 (v1.1 requirements added)
+**Updated:** 2026-04-12 (v1.1 requirements added; traceability updated with phase assignments)
 **Core Value:** The cascade must produce a single, well-calibrated bot probability per account — routing efficiently through stages while catching sophisticated bots that simple models miss.
 
 ## v1.0 Requirements (Validated)
@@ -120,4 +120,4 @@ Deferred to a future milestone.
 
 ---
 *Requirements defined: 2026-03-19*
-*Last updated: 2026-04-12 after v1.1 milestone definition*
+*Last updated: 2026-04-12 after v1.1 roadmap creation (Phases 5-7)*
