@@ -49,7 +49,8 @@ def calibrate_thresholds(
     if metric not in METRIC_FNS:
         raise ValueError(f"Unknown metric '{metric}'. Choose from: {list(METRIC_FNS)}")
 
-    optuna.logging.set_verbosity(optuna.logging.WARNING)
+    optuna.logging.enable_default_handler()
+    optuna.logging.set_verbosity(optuna.logging.INFO)
     y_true = S2["label"].to_numpy()
     metric_fn = METRIC_FNS[metric]
 

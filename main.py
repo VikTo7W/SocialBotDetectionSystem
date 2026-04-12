@@ -90,6 +90,7 @@ if __name__ == "__main__":
     th.s12_bot = 0.0
     th.novelty_force_stage3 = 1e9
 
+    print("Training stage and combiner models")
     # 4) Train the system (Stages trained on S1; meta models trained on S2 with OOF meta12 internally)
     sys = train_system(
         S1=S1,
@@ -102,6 +103,7 @@ if __name__ == "__main__":
         nodes_total=len(users),
     )
 
+    print("Calibrating novelty and confidence thresholds")
     # --- Threshold Calibration on S2 ---
     best_th = calibrate_thresholds(
         system=sys,
@@ -109,11 +111,12 @@ if __name__ == "__main__":
         edges_S2=edges_S2,
         nodes_total=len(accounts),
         metric="f1",
-        n_trials=200,
+        n_trials=100,
         seed=SEED,
     )
     # sys.th is now updated; predict_system() will use calibrated thresholds
 
+    print("Running trained system on the test set")
     # 5) Final evaluation on S3
     out = predict_system(sys, df=S3, edges_df=edges_S3, nodes_total=len(users))
     y_true = S3["label"].to_numpy()

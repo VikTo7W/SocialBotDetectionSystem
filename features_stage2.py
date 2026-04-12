@@ -29,8 +29,8 @@ def extract_stage2_features(df: pd.DataFrame, embedder, max_msgs: int = 50, max_
     probe_dim = None
 
     for _, r in df.iterrows():
-        username = (r.get("username") or "").strip()
-        profile = (r.get("profile") or "").strip()
+        username = str(r.get("username") or "").strip()
+        profile = str(r.get("profile") or "").strip()
 
         messages: List[Dict[str, Any]] = r.get("messages") or []
         # keep last max_msgs (most recent) OR sample; here: most recent

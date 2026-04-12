@@ -141,7 +141,9 @@ def extract_amr_embeddings_for_accounts(
     amr_texts = []
     for _, r in df.iterrows():
         # You can do: concatenate a few representative messages; here keep it simple
-        base = (r.get(text_field) or "")
+        base = str(r.get(text_field) or "").strip()
+        if base.lower() == "nan":
+            base = ""
         amr = amr_linearize_stub(base)
         amr_texts.append(amr if amr else "")
     emb = embedder.encode(amr_texts)
@@ -519,11 +521,13 @@ def train_system(
     embedder = TextEmbedder()
 
     # ---- Stage 1 training on S1
+    print("Stage 1 training on S1")
     X1_tr = extract_stage1_matrix(S1)
     y1_tr = S1["label"].to_numpy(dtype=np.int64)
     stage1 = Stage1MetadataModel(use_isotonic=False, random_state=random_state).fit(X1_tr, y1_tr)
 
     # ---- Stage 2a training on S1
+    print("Stage 2a training on S1")
     X2_tr = extract_stage2_features(S1, embedder)
     stage2a = Stage2BaseContentModel(use_isotonic=False, random_state=random_state).fit(X2_tr, y1_tr)
 
@@ -536,10 +540,12 @@ def train_system(
     z2a_S1 = out2a_S1["z2a"]
 
     # Train AMR delta refiner with offset z2a
+    print("Train AMR delta refiner with offset z2a")
     amr_refiner = AMRDeltaRefiner(lr=0.05, epochs=400, l2=1e-3, random_state=random_state)
     amr_refiner.fit(H_amr_S1, z2a_S1, y1_tr)
 
     # ---- Stage 3 training on S1
+    print("Stage 3 training on S1")
     X3_tr = build_graph_features_nodeidx(S1, edges_S1, nodes_total)
     stage3 = Stage3StructuralModel(use_isotonic=False, random_state=random_state).fit(X3_tr, y1_tr)
 
@@ -579,6 +585,7 @@ def train_system(
     p12_oof = oof_meta12_predictions(X_meta12_S2, y2, n_splits=5, random_state=random_state)
 
     # Train final meta12 on all S2 (after you got OOF for routing)
+    print("Train final meta12 on all S2 (after you got OOF for routing)")
     meta12 = train_meta12(X_meta12_S2, y2)
 
     # ---- Stage 3 routing on S2 using OOF p12 + novelty safeguards
@@ -605,6 +612,7 @@ def train_system(
         "n3": out3_S2["n3"],
     })
 
+    print("Train final meta123 on gated S2 (after you got OOF for routing)")
     meta123 = train_meta123(X_meta123_S2, y2)
 
     return TrainedSystem(
@@ -627,11 +635,11 @@ def predict_system(
     cfg, th = sys.cfg, sys.th
 
     # Stage 1
-    X1 = extract_stage1_matrix(df, cfg)
+    X1 = extract_stage1_matrix(df)
     out1 = sys.stage1.predict(X1)
 
     # Stage 2a
-    X2 = extract_stage2_features(df, cfg, sys.embedder)
+    X2 = extract_stage2_features(df, sys.embedder)
     out2a = sys.stage2a.predict(X2)
 
     # AMR gate
