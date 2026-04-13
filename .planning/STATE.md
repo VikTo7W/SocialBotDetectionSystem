@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Feature Leakage Audit & Fix
 status: planning
-stopped_at: Phase 5 context gathered
-last_updated: "2026-04-13T20:22:19.152Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-04-13T21:00:13.597Z"
 last_activity: 2026-04-12 — Roadmap created for v1.1 (Phases 5-7)
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 0
 ---
 
@@ -46,6 +46,7 @@ Progress: [░░░░░░░░░░] 0%
 | - | - | - | - |
 
 *Updated after each plan completion*
+| Phase 05 P01 | 30 | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -58,6 +59,9 @@ Recent decisions affecting current work:
 - [v1.1 research]: Both leakage paths (features_stage2.py:50-53 and botdetector_pipeline.py:539) must be fixed atomically in the same commit and retrain run to avoid residual leakage
 - [v1.1 research]: character_setting column must be dropped at load time in build_account_table — retained currently with only a comment warning
 - [v1.1 research]: All ablation paper tables must report S3 metrics only — S2 is the Optuna calibration set
+- [Phase 05]: AMR anchor switched from profile field to most-recent message text; text_field parameter removed entirely
+- [Phase 05]: character_setting dropped from build_account_table at load time (not just commented)
+- [Phase 05]: Feature vector grows from (N,391) to (N,395) with cv_intervals, char_len_mean, char_len_std, hour_entropy
 
 ### Pending Todos
 
@@ -70,6 +74,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-13T20:22:19.149Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-leakage-fix-and-baseline-retrain/05-CONTEXT.md
+Last session: 2026-04-13T21:00:13.595Z
+Stopped at: Completed 05-01-PLAN.md
+Resume file: None

@@ -37,16 +37,16 @@ Requirements for the Feature Leakage Audit & Fix milestone.
 ### Leakage Fix
 
 - [ ] **LEAK-01**: Developer can run Stage 2a evaluation and see AUC below 90% (confirming leakage removed)
-- [ ] **LEAK-02**: `extract_stage2_features` embeds message texts only (no username, no profile text)
-- [ ] **LEAK-03**: AMR extractor uses representative message text instead of profile field
-- [ ] **LEAK-04**: `character_setting` column is dropped at load time in `build_account_table`
+- [x] **LEAK-02**: `extract_stage2_features` embeds message texts only (no username, no profile text)
+- [x] **LEAK-03**: AMR extractor uses representative message text instead of profile field
+- [x] **LEAK-04**: `character_setting` column is dropped at load time in `build_account_table`
 - [ ] **LEAK-05**: Full system retrains cleanly with recalibrated thresholds after feature changes
 
 ### Content Features
 
-- [ ] **FEAT-01**: Stage 2a includes coefficient of variation of inter-post intervals
-- [ ] **FEAT-02**: Stage 2a includes message character length distribution stats (mean, std)
-- [ ] **FEAT-03**: Stage 2a includes entropy of posting hour-of-day distribution
+- [x] **FEAT-01**: Stage 2a includes coefficient of variation of inter-post intervals
+- [x] **FEAT-02**: Stage 2a includes message character length distribution stats (mean, std)
+- [x] **FEAT-03**: Stage 2a includes entropy of posting hour-of-day distribution
 - [ ] **FEAT-04**: Stage 2a includes cross-message cosine similarity and near-duplicate fraction
 
 ### Ablation & Paper Tables
@@ -98,13 +98,13 @@ Deferred to a future milestone.
 | API-02 | Phase 4 | Complete |
 | API-03 | Phase 4 | Complete |
 | LEAK-01 | Phase 5 | Pending |
-| LEAK-02 | Phase 5 | Pending |
-| LEAK-03 | Phase 5 | Pending |
-| LEAK-04 | Phase 5 | Pending |
+| LEAK-02 | Phase 5 | Complete |
+| LEAK-03 | Phase 5 | Complete |
+| LEAK-04 | Phase 5 | Complete |
 | LEAK-05 | Phase 5 | Pending |
-| FEAT-01 | Phase 5 | Pending |
-| FEAT-02 | Phase 5 | Pending |
-| FEAT-03 | Phase 5 | Pending |
+| FEAT-01 | Phase 5 | Complete |
+| FEAT-02 | Phase 5 | Complete |
+| FEAT-03 | Phase 5 | Complete |
 | FEAT-04 | Phase 6 | Pending |
 | ABL-01 | Phase 6 | Pending |
 | ABL-02 | Phase 7 | Pending |
