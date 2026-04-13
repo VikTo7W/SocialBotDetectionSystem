@@ -1,6 +1,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
 from typing import List, Dict, Any, Optional
@@ -29,9 +31,6 @@ def extract_stage2_features(df: pd.DataFrame, embedder, max_msgs: int = 50, max_
     probe_dim = None
 
     for _, r in df.iterrows():
-        username = str(r.get("username") or "").strip()
-        profile = str(r.get("profile") or "").strip()
-
         messages: List[Dict[str, Any]] = r.get("messages") or []
         # keep last max_msgs (most recent) OR sample; here: most recent
         messages = messages[-max_msgs:] if len(messages) > max_msgs else messages
@@ -47,10 +46,6 @@ def extract_stage2_features(df: pd.DataFrame, embedder, max_msgs: int = 50, max_
             if m.get("ts") is not None:
                 ts.append(float(m["ts"]))
 
-        if username:
-            texts.append("USERNAME: " + username)
-        if profile:
-            texts.append("PROFILE: " + profile)
 
         if len(texts) > 0:
             emb = embedder.encode(texts)
@@ -81,7 +76,31 @@ def extract_stage2_features(df: pd.DataFrame, embedder, max_msgs: int = 50, max_
         else:
             rate, delta_mean, delta_std = 0.0, 0.0, 0.0
 
-        temporal = np.array([rate, delta_mean, delta_std], dtype=np.float32)
+        # FEAT-01: CoV of inter-post intervals
+        if len(ts) >= 2:
+            cv_intervals = float(delta_std / max(delta_mean, 1e-6))
+        else:
+            cv_intervals = 0.0
+
+        # FEAT-02: Character length stats
+        if len(messages) > 0:
+            char_lens = [len(m.get("text") or "") for m in messages]
+            char_len_mean = float(np.mean(char_lens))
+            char_len_std = float(np.std(char_lens))
+        else:
+            char_len_mean, char_len_std = 0.0, 0.0
+
+        # FEAT-03: Posting hour entropy (Shannon, bits)
+        if len(ts) >= 2:
+            hours = [datetime.utcfromtimestamp(t).hour for t in ts]
+            counts = np.bincount(hours, minlength=24).astype(np.float64)
+            probs = counts / counts.sum()
+            nonzero = probs[probs > 0]
+            hour_entropy = float(-np.sum(nonzero * np.log2(nonzero)))
+        else:
+            hour_entropy = 0.0
+
+        temporal = np.array([rate, delta_mean, delta_std, cv_intervals, char_len_mean, char_len_std, hour_entropy], dtype=np.float32)
 
         feat = np.concatenate([emb_pool, ling_pool, temporal], axis=0)
         rows.append(feat)

@@ -57,7 +57,7 @@ def parse_subreddits(x: Any) -> List[str]:
 
 def load_users_csv(path: str) -> pd.DataFrame:
     """
-    Users.csv columns per README: user_id, name, description, submission_num, comment_num, character_setting,
+    Users.csv columns per README: user_id, name, description, submission_num, comment_num,
     comment_num_1, comment_num_2, subreddit. :contentReference[oaicite:4]{index=4}
     Labels derived from order: first 1907 human, last 1000 bot. :contentReference[oaicite:5]{index=5}
     """
@@ -178,9 +178,6 @@ def build_account_table(users_df: pd.DataFrame, upc: Dict[str, Any]) -> pd.DataF
             "comment_num": float(u.get("comment_num", 0.0)),
             "comment_num_1": float(u.get("comment_num_1", 0.0)),
             "comment_num_2": float(u.get("comment_num_2", 0.0)),
-
-            # Keep character_setting for analysis only, not features (README: can't be used) :contentReference[oaicite:11]{index=11}
-            "character_setting": u.get("character_setting", None),
 
             "messages": messages,
         })

@@ -132,22 +132,31 @@ def extract_amr_embeddings_for_accounts(
     df: pd.DataFrame,
     cfg: FeatureConfig,
     embedder: TextEmbedder,
-    text_field: str = "profile"
 ) -> np.ndarray:
     """
-    Minimal AMR representation: linearize AMR of a chosen field or concatenated text.
-    In a real system, you'd parse multiple messages and/or aggregate.
+    AMR anchor is the most recent message text (last item in messages list,
+    already sorted temporally by build_account_table). Accounts with no
+    messages receive a zero embedding vector.
     """
+    max_chars = cfg.max_chars_per_message if cfg is not None else 500
     amr_texts = []
+    zero_mask = []
+
     for _, r in df.iterrows():
-        # You can do: concatenate a few representative messages; here keep it simple
-        base = str(r.get(text_field) or "").strip()
-        if base.lower() == "nan":
-            base = ""
-        amr = amr_linearize_stub(base)
-        amr_texts.append(amr if amr else "")
-    emb = embedder.encode(amr_texts)
-    return emb.astype(np.float32)
+        messages = r.get("messages") or []
+        if messages:
+            anchor = str(messages[-1].get("text") or "")[:max_chars].strip()
+            amr_texts.append(amr_linearize_stub(anchor) if anchor else "")
+            zero_mask.append(not bool(anchor))
+        else:
+            amr_texts.append("")
+            zero_mask.append(True)
+
+    emb = embedder.encode(amr_texts).astype(np.float32)
+    for i, is_zero in enumerate(zero_mask):
+        if is_zero:
+            emb[i] = np.zeros(emb.shape[1], dtype=np.float32)
+    return emb
 
 
 # -----------------------------
@@ -536,7 +545,7 @@ def train_system(
     out2a_S1 = stage2a.predict(X2_tr)
 
     # AMR embeddings for S1
-    H_amr_S1 = extract_amr_embeddings_for_accounts(S1, cfg, embedder, text_field="profile")
+    H_amr_S1 = extract_amr_embeddings_for_accounts(S1, cfg, embedder)
     z2a_S1 = out2a_S1["z2a"]
 
     # Train AMR delta refiner with offset z2a
@@ -564,7 +573,7 @@ def train_system(
     # Compute AMR embeddings only for routed accounts
     H_amr_S2 = np.zeros((len(S2), H_amr_S1.shape[1]), dtype=np.float32)
     if amr_mask.any():
-        H_amr_S2[amr_mask] = extract_amr_embeddings_for_accounts(S2.loc[amr_mask], cfg, embedder, text_field="profile")
+        H_amr_S2[amr_mask] = extract_amr_embeddings_for_accounts(S2.loc[amr_mask], cfg, embedder)
 
     # Refine logits where AMR used
     z2 = out2a_S2["z2a"].astype(np.float64).copy()
@@ -648,7 +657,7 @@ def predict_system(
     # AMR embeddings for gated
     H_amr = np.zeros((len(df), 384), dtype=np.float32)  # if MiniLM; adjust if needed
     if amr_mask.any():
-        H_amr[amr_mask] = extract_amr_embeddings_for_accounts(df.loc[amr_mask], cfg, sys.embedder, text_field="profile")
+        H_amr[amr_mask] = extract_amr_embeddings_for_accounts(df.loc[amr_mask], cfg, sys.embedder)
 
     # Refine
     z2 = out2a["z2a"].astype(np.float64).copy()
