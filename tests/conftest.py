@@ -1,5 +1,5 @@
 """
-Shared pytest fixtures for Phase 2 threshold calibration tests.
+Shared pytest fixtures for bot detection system tests.
 
 Provides:
     minimal_system: returns (TrainedSystem, S2, edges_S2, nodes_total)
@@ -166,9 +166,9 @@ def minimal_system(monkeypatch):
     out2a = stage2a.predict(X2)
 
     # ---- Fit AMRDeltaRefiner ----
-    # Use stage2a logits as z_base; profile embeddings as AMR surrogate
-    profile_texts = S2["profile"].tolist()
-    H_amr = fake_embedder.encode(profile_texts)
+    # Use stage2a logits as z_base; AMR embeddings from most-recent message text
+    from botdetector_pipeline import extract_amr_embeddings_for_accounts
+    H_amr = extract_amr_embeddings_for_accounts(S2, FeatureConfig(stage1_numeric_cols=[]), fake_embedder)
     z2a = out2a["z2a"]
 
     amr_refiner = AMRDeltaRefiner(lr=0.05, epochs=100, l2=1e-3, random_state=42)
