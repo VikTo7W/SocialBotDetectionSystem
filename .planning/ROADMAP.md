@@ -23,7 +23,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 
 **Milestone Goal:** Remove feature leakage from Stage 2a and AMR, retrain the full cascade on clean features, and produce paper-ready ablation tables documenting each stage's contribution.
 
-- [ ] **Phase 5: Leakage Fix and Baseline Retrain** — Remove identity leakage from Stage 2a and AMR, add table-stakes behavioral features, retrain and recalibrate the full cascade
+- [x] **Phase 5: Leakage Fix and Baseline Retrain** — Remove identity leakage from Stage 2a and AMR, add table-stakes behavioral features, retrain and recalibrate the full cascade (completed 2026-04-13)
 - [ ] **Phase 6: Ablation Infrastructure and Differentiator Features** — Build force-routing ablation runner, add cross-message similarity features
 - [ ] **Phase 7: Ablation Execution and Paper Tables** — Run all ablation variants and generate four LaTeX paper tables
 
@@ -39,7 +39,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
   3. The AMR extractor uses a representative message text anchor; `text_field="profile"` is gone from the call site
   4. `character_setting` is absent from the DataFrame produced by `build_account_table` (assertion passes)
   5. The full cascade (including meta12, meta123, and recalibrated thresholds) trains end-to-end without error and serializes to `trained_system.joblib`
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 05-01-PLAN.md — Test scaffolding, v1.0 metrics capture, atomic leakage fix and behavioral features
 - [ ] 05-02-PLAN.md — Update test fixtures, full cascade retrain and leakage removal validation
@@ -74,6 +74,6 @@ Plans:
 | 2. Threshold Calibration | v1.0 | 2/2 | Complete | 2026-03-19 |
 | 3. Evaluation | v1.0 | 1/1 | Complete | 2026-03-19 |
 | 4. REST API | v1.0 | 2/2 | Complete | 2026-03-19 |
-| 5. Leakage Fix and Baseline Retrain | 1/2 | In Progress|  | - |
+| 5. Leakage Fix and Baseline Retrain | 2/2 | Complete   | 2026-04-13 | - |
 | 6. Ablation Infrastructure and Differentiator Features | v1.1 | 0/TBD | Not started | - |
 | 7. Ablation Execution and Paper Tables | v1.1 | 0/TBD | Not started | - |

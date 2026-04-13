@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Feature Leakage Audit & Fix
 status: planning
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-04-13T21:00:13.597Z"
+stopped_at: "Checkpoint: 05-02 Task 2 — awaiting user to run python main.py"
+last_updated: "2026-04-13T21:03:05.546Z"
 last_activity: 2026-04-12 — Roadmap created for v1.1 (Phases 5-7)
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -62,6 +62,7 @@ Recent decisions affecting current work:
 - [Phase 05]: AMR anchor switched from profile field to most-recent message text; text_field parameter removed entirely
 - [Phase 05]: character_setting dropped from build_account_table at load time (not just commented)
 - [Phase 05]: Feature vector grows from (N,391) to (N,395) with cv_intervals, char_len_mean, char_len_std, hour_entropy
+- [Phase 05-02]: conftest.py minimal_system fixture uses extract_amr_embeddings_for_accounts(S2, FeatureConfig(...), embedder) — no more raw profile text encoding
 
 ### Pending Todos
 
@@ -74,6 +75,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-13T21:00:13.595Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-04-13T21:03:00.655Z
+Stopped at: Checkpoint: 05-02 Task 2 — awaiting user to run python main.py
 Resume file: None
