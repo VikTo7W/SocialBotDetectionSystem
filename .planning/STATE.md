@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Feature Leakage Audit & Fix
-status: ready_to_plan
-stopped_at: ""
-last_updated: "2026-04-12T00:00:00.000Z"
-last_activity: "2026-04-12 — Roadmap created for v1.1 (Phases 5-7)"
+status: planning
+stopped_at: Phase 5 context gathered
+last_updated: "2026-04-13T20:22:19.152Z"
+last_activity: 2026-04-12 — Roadmap created for v1.1 (Phases 5-7)
 progress:
   total_phases: 3
   completed_phases: 0
@@ -70,6 +70,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-12
-Stopped at: Roadmap created — Phase 5 ready to plan
-Resume file: None
+Last session: 2026-04-13T20:22:19.149Z
+Stopped at: Phase 5 context gathered
+Resume file: .planning/phases/05-leakage-fix-and-baseline-retrain/05-CONTEXT.md
