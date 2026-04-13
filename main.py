@@ -1,4 +1,8 @@
+import json
+import os
+
 import joblib
+import numpy as np
 import pandas as pd
 import torch
 from sklearn.model_selection import train_test_split
@@ -7,8 +11,6 @@ from botsim24_io import load_users_csv, load_user_post_comment_json, build_accou
 from botdetector_pipeline import StageThresholds, train_system, predict_system
 from calibrate import calibrate_thresholds
 from evaluate import evaluate_s3
-import numpy as np
-import pandas as pd
 
 def filter_edges_for_split(edges_df: pd.DataFrame, node_ids: np.ndarray) -> pd.DataFrame:
     node_set = set(node_ids.tolist())
@@ -24,6 +26,9 @@ if __name__ == "__main__":
     users["user_id"] = users["user_id"].astype(str)
     upc = load_user_post_comment_json("user_post_comment.json")
     accounts = build_account_table(users, upc)
+    assert "character_setting" not in accounts.columns, (
+        "character_setting must not appear in account table -- it is a target leak"
+    )
 
     accounts["account_id"] = accounts["account_id"].astype(str)
     accounts = accounts.merge(users[["user_id", "node_idx"]], left_on="account_id", right_on="user_id", how="left")
@@ -83,6 +88,25 @@ if __name__ == "__main__":
     edges_S2 = filter_edges_for_split(edges_df, S2["node_idx"].to_numpy())
     edges_S3 = filter_edges_for_split(edges_df, S3["node_idx"].to_numpy())
 
+    # ---- Capture v1.0 S3 metrics before any code changes ----
+    if os.path.exists("trained_system.joblib") and not os.path.exists("results_v10.json"):
+        print("[main] Capturing v1.0 baseline metrics on S3...")
+        sys_v10 = joblib.load("trained_system.joblib")
+        out_v10 = predict_system(sys_v10, df=S3, edges_df=edges_S3, nodes_total=len(users))
+        y_true_v10 = S3["label"].to_numpy()
+        report_v10 = evaluate_s3(out_v10, y_true_v10)
+        results_v10 = {
+            "auc": report_v10["overall"]["auc"],
+            "f1": report_v10["overall"]["f1"],
+            "precision": report_v10["overall"]["precision"],
+            "recall": report_v10["overall"]["recall"],
+            "stage": "S3",
+        }
+        with open("results_v10.json", "w") as f:
+            json.dump(results_v10, f, indent=2)
+        print(f"[main] v1.0 metrics saved to results_v10.json: {results_v10}")
+        del sys_v10, out_v10, y_true_v10, report_v10
+
     th = StageThresholds()
 
     # Disable Stage 3 routing safely (uncertain band always false + novelty never triggers)
@@ -123,3 +147,5 @@ if __name__ == "__main__":
     report = evaluate_s3(out, y_true)
     joblib.dump(sys, "trained_system.joblib")
     print(f"[main] Saved TrainedSystem to trained_system.joblib")
+    joblib.dump(sys, "trained_system_v11.joblib")
+    print(f"[main] Saved v1.1 TrainedSystem to trained_system_v11.joblib")
