@@ -1,6 +1,3 @@
-import json
-import os
-
 import joblib
 import numpy as np
 import pandas as pd
@@ -87,25 +84,6 @@ if __name__ == "__main__":
     edges_S1 = filter_edges_for_split(edges_df, S1["node_idx"].to_numpy())
     edges_S2 = filter_edges_for_split(edges_df, S2["node_idx"].to_numpy())
     edges_S3 = filter_edges_for_split(edges_df, S3["node_idx"].to_numpy())
-
-    # ---- Capture v1.0 S3 metrics before any code changes ----
-    if os.path.exists("trained_system.joblib") and not os.path.exists("results_v10.json"):
-        print("[main] Capturing v1.0 baseline metrics on S3...")
-        sys_v10 = joblib.load("trained_system.joblib")
-        out_v10 = predict_system(sys_v10, df=S3, edges_df=edges_S3, nodes_total=len(users))
-        y_true_v10 = S3["label"].to_numpy()
-        report_v10 = evaluate_s3(out_v10, y_true_v10)
-        results_v10 = {
-            "auc": report_v10["overall"]["auc"],
-            "f1": report_v10["overall"]["f1"],
-            "precision": report_v10["overall"]["precision"],
-            "recall": report_v10["overall"]["recall"],
-            "stage": "S3",
-        }
-        with open("results_v10.json", "w") as f:
-            json.dump(results_v10, f, indent=2)
-        print(f"[main] v1.0 metrics saved to results_v10.json: {results_v10}")
-        del sys_v10, out_v10, y_true_v10, report_v10
 
     th = StageThresholds()
 
