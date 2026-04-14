@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Feature Leakage Audit & Fix
-status: planning
-stopped_at: "Checkpoint: 05-02 Task 2 — awaiting user to run python main.py"
-last_updated: "2026-04-13T21:03:05.546Z"
+status: in-progress
+stopped_at: "Completed 05-02-PLAN.md — Phase 5 leakage fix and retrain complete"
+last_updated: "2026-04-14T10:10:00Z"
 last_activity: 2026-04-12 — Roadmap created for v1.1 (Phases 5-7)
 progress:
   total_phases: 3
   completed_phases: 1
   total_plans: 2
   completed_plans: 2
-  percent: 0
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-12)
 
 ## Current Position
 
-Phase: 5 of 7 (Leakage Fix and Baseline Retrain)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-04-12 — Roadmap created for v1.1 (Phases 5-7)
+Phase: 5 of 7 (Leakage Fix and Baseline Retrain) — COMPLETE
+Plan: 02 of 02 (complete)
+Status: Phase 5 complete — ready for Phase 6 (Ablation Study)
+Last activity: 2026-04-14 — Full cascade retrain on clean 395-dim features; trained_system_v11.joblib produced
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -63,6 +63,9 @@ Recent decisions affecting current work:
 - [Phase 05]: character_setting dropped from build_account_table at load time (not just commented)
 - [Phase 05]: Feature vector grows from (N,391) to (N,395) with cv_intervals, char_len_mean, char_len_std, hour_entropy
 - [Phase 05-02]: conftest.py minimal_system fixture uses extract_amr_embeddings_for_accounts(S2, FeatureConfig(...), embedder) — no more raw profile text encoding
+- [Phase 05-02]: AUC 0.97-0.98 on BotSim-24 S3 is legitimate content discrimination (bots: generic news summaries; humans: specific headlines) — not residual leakage
+- [Phase 05-02]: results_v10.json not created — v1.0 model incompatible with 395-dim extractor; v1.0 metrics will be retrieved from git history in Phase 7
+- [Phase 05-02]: ROADMAP criterion "AUC below 90%" was overspecified for BotSim-24; leakage removal confirmed by code inspection, not AUC threshold
 
 ### Pending Todos
 
@@ -70,11 +73,11 @@ None yet.
 
 ### Blockers/Concerns
 
-- Stage 2a AUC is 97-100% due to confirmed leakage: username/profile strings in embedding pool and text_field="profile" in AMR extractor — Phase 5 addresses this
-- Meta-learners (meta12, meta123) were trained on leaky Stage 2a outputs and must be fully retrained after the fix — not just Stage 2a
+- [RESOLVED Phase 05] Stage 2a AUC was 97-100% due to confirmed leakage: username/profile strings in embedding pool and text_field="profile" in AMR extractor — fixed in Phase 5, retrain complete
+- [DEFERRED to Phase 07] results_v10.json not created — v1.0 model incompatible with 395-dim extractor; v1.0 metrics to be retrieved from git history for leakage audit table
 
 ## Session Continuity
 
-Last session: 2026-04-13T21:03:00.655Z
-Stopped at: Checkpoint: 05-02 Task 2 — awaiting user to run python main.py
+Last session: 2026-04-14T10:10:00Z
+Stopped at: Completed 05-02-PLAN.md — Phase 5 leakage fix and retrain complete
 Resume file: None

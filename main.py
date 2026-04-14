@@ -113,7 +113,7 @@ if __name__ == "__main__":
         edges_S2=edges_S2,
         nodes_total=len(accounts),
         metric="f1",
-        n_trials=100,
+        n_trials=50,
         seed=SEED,
     )
     # sys.th is now updated; predict_system() will use calibrated thresholds

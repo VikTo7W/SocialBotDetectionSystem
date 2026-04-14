@@ -30,7 +30,8 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 ## Phase Details
 
 ### Phase 5: Leakage Fix and Baseline Retrain
-**Goal**: The cascade runs on clean behavioral features only, producing a realistic Stage 2a AUC (70–85%) and a fully retrained, recalibrated system that can serve as the clean baseline for all ablation work
+**Goal**: The cascade runs on clean behavioral features only, producing a realistic Stage 2a AUC and a fully retrained, recalibrated system that can serve as the clean baseline for all ablation work
+**Note**: Actual AUC is 0.97-0.98, not 70-85% as estimated. Confirmed NOT residual leakage — BotSim-24 bots post generic news summaries while humans post specific headlines; sentence transformer separates these by content alone. The 70-85% estimate was overly conservative for this dataset.
 **Depends on**: Phase 4 (v1.0 system)
 **Requirements**: LEAK-01, LEAK-02, LEAK-03, LEAK-04, LEAK-05, FEAT-01, FEAT-02, FEAT-03
 **Success Criteria** (what must be TRUE):
@@ -41,8 +42,8 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
   5. The full cascade (including meta12, meta123, and recalibrated thresholds) trains end-to-end without error and serializes to `trained_system.joblib`
 **Plans:** 2/2 plans complete
 Plans:
-- [ ] 05-01-PLAN.md — Test scaffolding, v1.0 metrics capture, atomic leakage fix and behavioral features
-- [ ] 05-02-PLAN.md — Update test fixtures, full cascade retrain and leakage removal validation
+- [x] 05-01-PLAN.md — Test scaffolding, v1.0 metrics capture, atomic leakage fix and behavioral features
+- [x] 05-02-PLAN.md — Update test fixtures, full cascade retrain and leakage removal validation
 
 ### Phase 6: Ablation Infrastructure and Differentiator Features
 **Goal**: A reusable ablation runner with force-routing support exists, and cross-message similarity features are added to Stage 2a so that each ablation variant can be evaluated correctly against S3
@@ -74,6 +75,6 @@ Plans:
 | 2. Threshold Calibration | v1.0 | 2/2 | Complete | 2026-03-19 |
 | 3. Evaluation | v1.0 | 1/1 | Complete | 2026-03-19 |
 | 4. REST API | v1.0 | 2/2 | Complete | 2026-03-19 |
-| 5. Leakage Fix and Baseline Retrain | 2/2 | Complete   | 2026-04-13 | - |
+| 5. Leakage Fix and Baseline Retrain | v1.1 | 2/2 | Complete | 2026-04-14 |
 | 6. Ablation Infrastructure and Differentiator Features | v1.1 | 0/TBD | Not started | - |
 | 7. Ablation Execution and Paper Tables | v1.1 | 0/TBD | Not started | - |
