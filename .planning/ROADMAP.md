@@ -53,7 +53,7 @@ Plans:
   1. `ablation.py` exists with an `AblationConfig` dataclass and force-routing threshold helpers that can route the full test set through any single stage
   2. Cross-message cosine similarity (mean pairwise) and near-duplicate fraction (sim > 0.9) are computed as Stage 2a features and appear in the trained feature set
   3. Running an ablation variant with force-routing to Stage 1 evaluates all S3 accounts at Stage 1 only (no accounts escalated to Stage 2 or 3)
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
 - [ ] 06-01-PLAN.md — Wave 0 test stubs, FEAT-04 cross-message similarity, ABL-01 ablation runner
 - [ ] 06-02-PLAN.md — Add v12 joblib save to main.py and retrain checkpoint
@@ -79,5 +79,5 @@ Plans:
 | 3. Evaluation | v1.0 | 1/1 | Complete | 2026-03-19 |
 | 4. REST API | v1.0 | 2/2 | Complete | 2026-03-19 |
 | 5. Leakage Fix and Baseline Retrain | v1.1 | 2/2 | Complete | 2026-04-14 |
-| 6. Ablation Infrastructure and Differentiator Features | v1.1 | 0/2 | Not started | - |
+| 6. Ablation Infrastructure and Differentiator Features | 1/2 | In Progress|  | - |
 | 7. Ablation Execution and Paper Tables | v1.1 | 0/TBD | Not started | - |

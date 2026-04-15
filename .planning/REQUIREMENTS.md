@@ -47,13 +47,13 @@ Requirements for the Feature Leakage Audit & Fix milestone.
 - [x] **FEAT-01**: Stage 2a includes coefficient of variation of inter-post intervals
 - [x] **FEAT-02**: Stage 2a includes message character length distribution stats (mean, std)
 - [x] **FEAT-03**: Stage 2a includes entropy of posting hour-of-day distribution
-- [ ] **FEAT-04**: Stage 2a includes cross-message cosine similarity and near-duplicate fraction
+- [x] **FEAT-04**: Stage 2a includes cross-message cosine similarity and near-duplicate fraction
 
 ### Ablation & Paper Tables
 
-- [ ] **ABL-01**: Ablation runner supports force-routing to evaluate full test set at each stage
+- ~~**ABL-01**: Ablation runner supports force-routing to evaluate full test set at each stage~~ — **Obsolete**: `predict_system()` already runs all stages on all accounts unconditionally; `evaluate_s3()` already reports per-stage metrics (`p1`, `p12`, `p_final`) on the full test set. Force-routing provides no additional information.
 - [ ] **ABL-02**: Table 1 (leakage audit) generated: v1.0 vs v1.1 metrics on S3
-- [ ] **ABL-03**: Table 2 (stage contribution) generated: force-routed ablation per stage
+- ~~**ABL-03**: Table 2 (stage contribution) generated: force-routed ablation per stage~~ — **Obsolete**: per-stage contribution is already in `evaluate_s3()` output (`p1`/`p12`/`p_final` rows). No separate ablation needed.
 - [ ] **ABL-04**: Table 3 (routing efficiency) generated: % stage exits + AMR trigger rate
 - [ ] **ABL-05**: Table 4 (Stage 1 feature group ablation) generated: per-column-group masking
 - [ ] **ABL-06**: All tables exported as LaTeX via `pd.to_latex()` and include AUC-ROC alongside F1
@@ -105,17 +105,17 @@ Deferred to a future milestone.
 | FEAT-01 | Phase 5 | Complete |
 | FEAT-02 | Phase 5 | Complete |
 | FEAT-03 | Phase 5 | Complete |
-| FEAT-04 | Phase 6 | Pending |
-| ABL-01 | Phase 6 | Pending |
+| FEAT-04 | Phase 6 | Complete |
+| ABL-01 | — | Obsolete |
 | ABL-02 | Phase 7 | Pending |
-| ABL-03 | Phase 7 | Pending |
+| ABL-03 | — | Obsolete |
 | ABL-04 | Phase 7 | Pending |
 | ABL-05 | Phase 7 | Pending |
 | ABL-06 | Phase 7 | Pending |
 
 **Coverage (v1.1):**
-- v1.1 requirements: 15 total
-- Mapped to phases: 15
+- v1.1 requirements: 15 total (13 active, 2 obsolete: ABL-01, ABL-03)
+- Mapped to phases: 13
 - Unmapped: 0 ✓
 
 ---

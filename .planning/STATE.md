@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Feature Leakage Audit & Fix
 status: in-progress
-stopped_at: "Completed 05-02-PLAN.md — Phase 5 leakage fix and retrain complete"
-last_updated: "2026-04-14T10:10:00Z"
-last_activity: 2026-04-12 — Roadmap created for v1.1 (Phases 5-7)
+stopped_at: "Phase 6 plan 01 complete — FEAT-04 implemented; ready to execute 06-02-PLAN.md (retrain to v12)"
+last_updated: "2026-04-15T00:00:00Z"
+last_activity: 2026-04-15 — Phase 6 planned; ABL-01/ABL-03 dropped (redundant with existing evaluate_s3 output)
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 2
+  total_plans: 4
   completed_plans: 2
-  percent: 100
+  percent: 33
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-12)
 
 **Core value:** The cascade must produce a single, well-calibrated bot probability per account — routing efficiently through stages while catching sophisticated bots that simple models miss.
-**Current focus:** Phase 5 — Leakage Fix and Baseline Retrain (ready to plan)
+**Current focus:** Phase 6 — Ablation Infrastructure and Differentiator Features (ready to execute)
 
 ## Current Position
 
-Phase: 5 of 7 (Leakage Fix and Baseline Retrain) — COMPLETE
-Plan: 02 of 02 (complete)
-Status: Phase 5 complete — ready for Phase 6 (Ablation Study)
-Last activity: 2026-04-14 — Full cascade retrain on clean 395-dim features; trained_system_v11.joblib produced
+Phase: 6 of 7 (Ablation Infrastructure and Differentiator Features) — IN PROGRESS
+Plan: 01 of 02 (06-01 complete; 06-02 retrain pending)
+Status: Phase 6 plan 01 complete — FEAT-04 implemented, 397-dim output; retrain to v12 next
+Last activity: 2026-04-15 — 06-01 executed: FEAT-04 cross-message cosine similarity features added at indices 395-396
 
-Progress: [██████████] 100%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -66,6 +66,10 @@ Recent decisions affecting current work:
 - [Phase 05-02]: AUC 0.97-0.98 on BotSim-24 S3 is legitimate content discrimination (bots: generic news summaries; humans: specific headlines) — not residual leakage
 - [Phase 05-02]: results_v10.json not created — v1.0 model incompatible with 395-dim extractor; v1.0 metrics will be retrieved from git history in Phase 7
 - [Phase 05-02]: ROADMAP criterion "AUC below 90%" was overspecified for BotSim-24; leakage removal confirmed by code inspection, not AUC threshold
+- [Phase 06 planning]: ABL-01 and ABL-03 dropped — predict_system() already runs all stages on all accounts unconditionally; evaluate_s3() already reports p1/p12/p_final on full test set; force-routing adds nothing
+- [Phase 06 planning]: Feature vector grows 395→397 with FEAT-04 (cross_msg_sim_mean at index 395, near_dup_frac at index 396)
+- [Phase 06-01]: NormalizedFakeEmbedder must be defined locally in test files — conftest.py is pytest-injected, not directly importable as a module
+- [Phase 06-01]: FEAT-04 defaults to 0.0 for accounts with 0 or 1 messages; near-dup threshold = 0.9 (_NEAR_DUP_SIM_THRESHOLD constant)
 
 ### Pending Todos
 
@@ -78,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-14T10:10:00Z
-Stopped at: Completed 05-02-PLAN.md — Phase 5 leakage fix and retrain complete
+Last session: 2026-04-15T00:48:00Z
+Stopped at: 06-01-PLAN.md complete — FEAT-04 implemented (397-dim output); ready to execute 06-02-PLAN.md (retrain to v12)
 Resume file: None
