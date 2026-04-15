@@ -45,6 +45,20 @@ class FakeEmbedder:
         return rng.randn(len(texts), 384).astype(np.float32)
 
 
+class NormalizedFakeEmbedder:
+    """
+    Deterministic fake embedder that returns L2-normalized 384-dim vectors.
+    Required for FEAT-04 value tests where cosine similarity must be valid
+    (i.e. emb @ emb.T gives true cosine similarities only for unit vectors).
+    """
+
+    def encode(self, texts, batch_size: int = 64) -> np.ndarray:
+        rng = np.random.RandomState(42)
+        raw = rng.randn(len(texts), 384).astype(np.float32)
+        norms = np.linalg.norm(raw, axis=1, keepdims=True)
+        return raw / np.maximum(norms, 1e-8)
+
+
 def _make_synthetic_dataframe(rng: np.random.RandomState) -> pd.DataFrame:
     """Build a 50-account synthetic DataFrame with all required columns."""
     n = 50

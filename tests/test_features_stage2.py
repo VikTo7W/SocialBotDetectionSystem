@@ -7,17 +7,20 @@ Requirements covered:
   - FEAT-01: cv_intervals at index 391
   - FEAT-02: char_len_mean, char_len_std at indices 392, 393
   - FEAT-03: hour_entropy at index 394
+  - FEAT-04: cross_msg_sim_mean at index 395, near_dup_frac at index 396
 
-Feature vector layout (after fix):
-  [0..383]  emb_pool     (384-dim)
-  [384..387] ling_pool   (4-dim)
+Feature vector layout (after FEAT-04):
+  [0..383]  emb_pool          (384-dim)
+  [384..387] ling_pool        (4-dim)
   [388]     rate
   [389]     delta_mean
   [390]     delta_std
-  [391]     cv_intervals  (FEAT-01)
-  [392]     char_len_mean (FEAT-02)
-  [393]     char_len_std  (FEAT-02)
-  [394]     hour_entropy  (FEAT-03)
+  [391]     cv_intervals      (FEAT-01)
+  [392]     char_len_mean     (FEAT-02)
+  [393]     char_len_std      (FEAT-02)
+  [394]     hour_entropy      (FEAT-03)
+  [395]     cross_msg_sim_mean (FEAT-04)
+  [396]     near_dup_frac     (FEAT-04)
 """
 
 import numpy as np
@@ -26,6 +29,20 @@ import pytest
 
 from features_stage2 import extract_stage2_features
 from botdetector_pipeline import extract_amr_embeddings_for_accounts, FeatureConfig
+
+
+class NormalizedFakeEmbedder:
+    """
+    Deterministic fake embedder that returns L2-normalized 384-dim vectors.
+    Required for FEAT-04 value tests — cosine similarity via emb @ emb.T is
+    only valid when embeddings are unit-normalized.
+    """
+
+    def encode(self, texts, batch_size: int = 64) -> np.ndarray:
+        rng = np.random.RandomState(42)
+        raw = rng.randn(len(texts), 384).astype(np.float32)
+        norms = np.linalg.norm(raw, axis=1, keepdims=True)
+        return raw / np.maximum(norms, 1e-8)
 
 
 class RecordingEmbedder:
@@ -125,7 +142,7 @@ def test_feat01_default_zero():
     rec = RecordingEmbedder()
     df = _make_single_account_df(messages=[])
     feat = extract_stage2_features(df, rec)
-    assert feat.shape == (1, 395), f"Expected (1, 395), got {feat.shape}"
+    assert feat.shape == (1, 397), f"Expected (1, 397), got {feat.shape}"
     assert feat[0, 391] == 0.0, "cv_intervals must be 0.0 for 0-message account"
 
 
@@ -229,4 +246,69 @@ def test_feat03_entropy_value():
 
     assert abs(feat[0, 394] - expected_entropy) < 1e-3, (
         f"hour_entropy mismatch: got {feat[0, 394]}, expected {expected_entropy}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# FEAT-04: Cross-message cosine similarity (indices 395, 396)
+# ---------------------------------------------------------------------------
+
+def test_feat04_default_zero():
+    """cross_msg_sim_mean and near_dup_frac must be 0.0 for 0 or 1 message accounts."""
+    rec = RecordingEmbedder()
+
+    # 0-message account
+    df0 = _make_single_account_df(messages=[])
+    feat0 = extract_stage2_features(df0, rec)
+    assert feat0[0, 395] == 0.0, "cross_msg_sim_mean must be 0.0 for 0-message account"
+    assert feat0[0, 396] == 0.0, "near_dup_frac must be 0.0 for 0-message account"
+
+    # 1-message account
+    df1 = _make_single_account_df(messages=[{"text": "only message", "ts": 1700000000.0}])
+    feat1 = extract_stage2_features(df1, rec)
+    assert feat1[0, 395] == 0.0, "cross_msg_sim_mean must be 0.0 for 1-message account"
+    assert feat1[0, 396] == 0.0, "near_dup_frac must be 0.0 for 1-message account"
+
+
+def test_feat04_sim_mean():
+    """cross_msg_sim_mean must equal mean of off-diagonal cosine similarities."""
+    norm_emb = NormalizedFakeEmbedder()
+    texts = ["message one", "message two", "message three"]
+    messages = [{"text": t, "ts": float(1700000000 + i * 3600)} for i, t in enumerate(texts)]
+    df = _make_single_account_df(messages=messages)
+
+    feat = extract_stage2_features(df, norm_emb)
+
+    # Compute expected value manually using the same embedder
+    emb = NormalizedFakeEmbedder().encode(texts)
+    sim = emb @ emb.T
+    n = sim.shape[0]
+    mask = ~np.eye(n, dtype=bool)
+    off_diag = sim[mask]
+    expected = float(np.mean(off_diag))
+
+    assert abs(feat[0, 395] - expected) < 1e-4, (
+        f"cross_msg_sim_mean mismatch: got {feat[0, 395]}, expected {expected}"
+    )
+
+
+def test_feat04_near_dup():
+    """near_dup_frac must equal fraction of off-diagonal similarities > 0.9."""
+    norm_emb = NormalizedFakeEmbedder()
+    texts = ["message one", "message two", "message three"]
+    messages = [{"text": t, "ts": float(1700000000 + i * 3600)} for i, t in enumerate(texts)]
+    df = _make_single_account_df(messages=messages)
+
+    feat = extract_stage2_features(df, norm_emb)
+
+    # Compute expected value manually
+    emb = NormalizedFakeEmbedder().encode(texts)
+    sim = emb @ emb.T
+    n = sim.shape[0]
+    mask = ~np.eye(n, dtype=bool)
+    off_diag = sim[mask]
+    expected_frac = float(np.mean(off_diag > 0.9))
+
+    assert abs(feat[0, 396] - expected_frac) < 1e-4, (
+        f"near_dup_frac mismatch: got {feat[0, 396]}, expected {expected_frac}"
     )
