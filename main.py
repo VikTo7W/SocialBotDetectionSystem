@@ -127,3 +127,5 @@ if __name__ == "__main__":
     print(f"[main] Saved TrainedSystem to trained_system.joblib")
     joblib.dump(sys, "trained_system_v11.joblib")
     print(f"[main] Saved v1.1 TrainedSystem to trained_system_v11.joblib")
+    joblib.dump(sys, "trained_system_v12.joblib")
+    print(f"[main] Saved v1.2 TrainedSystem to trained_system_v12.joblib")
