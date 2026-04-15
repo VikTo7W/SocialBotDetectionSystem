@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Feature Leakage Audit & Fix
 status: completed
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-04-15T22:54:10.317Z"
+stopped_at: Checkpoint at 07-02 Task 2 — ablation_tables.py complete, awaiting user worktree retrain
+last_updated: "2026-04-15T22:57:10.888Z"
 last_activity: "2026-04-15 — 06-01 executed: FEAT-04 cross-message cosine similarity features added at indices 395-396"
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
   percent: 33
 ---
 
@@ -49,6 +49,7 @@ Progress: [███░░░░░░░] 33%
 | Phase 05 P01 | 30 | 3 tasks | 6 files |
 | Phase 06 P02 | 10 | 2 tasks | 1 files |
 | Phase 07 P01 | 1 | 1 tasks | 1 files |
+| Phase 07 P02 | 5 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ Recent decisions affecting current work:
 - [Phase 06-02]: v11 save preserved unchanged so 395-dim baseline artifact is available for Phase 7 ablation comparison; v12 appended after v11 in main.py
 - [Phase 07-01]: Table 2 uses 3 rows (p1/p12/p_final), p2 excluded — Stage 2 alone on all accounts is not a cascade stage comparison
 - [Phase 07-01]: save_latex contract enforces float_format='%.4f'; test asserts '0.9000' string appears in LaTeX file content
+- [Phase 07-02]: Monkey-patch targets botdetector_pipeline.extract_stage1_matrix (not features_stage1) because from-import creates a local binding in bp module scope
+- [Phase 07-02]: masked_predict copies X before zeroing columns to avoid mutating the array returned by _orig_extract_stage1_matrix
 
 ### Pending Todos
 
@@ -88,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-15T22:54:10.314Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-04-15T22:57:00.372Z
+Stopped at: Checkpoint at 07-02 Task 2 — ablation_tables.py complete, awaiting user worktree retrain
 Resume file: None

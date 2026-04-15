@@ -25,7 +25,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 
 - [x] **Phase 5: Leakage Fix and Baseline Retrain** — Remove identity leakage from Stage 2a and AMR, add table-stakes behavioral features, retrain and recalibrate the full cascade (completed 2026-04-13)
 - [x] **Phase 6: Ablation Infrastructure and Differentiator Features** — Build force-routing ablation runner, add cross-message similarity features (completed 2026-04-15)
-- [ ] **Phase 7: Ablation Execution and Paper Tables** — Run all ablation variants and generate four LaTeX paper tables
+- [x] **Phase 7: Ablation Execution and Paper Tables** — Run all ablation variants and generate four LaTeX paper tables (completed 2026-04-15)
 
 ## Phase Details
 
@@ -68,7 +68,7 @@ Plans:
   3. Table 3 (routing efficiency) is generated showing exit percentage per stage and AMR trigger rate
   4. Table 4 (Stage 1 feature group ablation) is generated showing metrics per column-group mask including AUC-ROC
   5. All four tables are exported as valid LaTeX via `pd.to_latex()` and saved to disk
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 07-01-PLAN.md — Wave 0 test stubs for ablation table functions
 - [ ] 07-02-PLAN.md — Implement ablation_tables.py, v1.0 metrics retrieval, and LaTeX export
@@ -83,4 +83,4 @@ Plans:
 | 4. REST API | v1.0 | 2/2 | Complete | 2026-03-19 |
 | 5. Leakage Fix and Baseline Retrain | v1.1 | 2/2 | Complete | 2026-04-14 |
 | 6. Ablation Infrastructure and Differentiator Features | 2/2 | Complete   | 2026-04-15 | - |
-| 7. Ablation Execution and Paper Tables | 1/2 | In Progress|  | - |
+| 7. Ablation Execution and Paper Tables | 2/2 | Complete   | 2026-04-15 | - |
