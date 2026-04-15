@@ -61,14 +61,17 @@ Plans:
 ### Phase 7: Ablation Execution and Paper Tables
 **Goal**: Four paper-ready LaTeX ablation tables are generated from S3 evaluation, covering leakage audit, stage contribution, routing efficiency, and Stage 1 feature group ablation
 **Depends on**: Phase 6
-**Requirements**: ABL-02, ABL-03, ABL-04, ABL-05, ABL-06
+**Requirements**: ABL-02, ABL-04, ABL-05, ABL-06
 **Success Criteria** (what must be TRUE):
   1. Table 1 (leakage audit) is generated showing v1.0 vs v1.1 S3 metrics side-by-side including AUC-ROC
-  2. Table 2 (stage contribution) is generated showing force-routed metrics per stage including AUC-ROC
+  2. Table 2 (stage contribution) is generated showing per-stage metrics (p1/p12/p_final) from evaluate_s3() including AUC-ROC
   3. Table 3 (routing efficiency) is generated showing exit percentage per stage and AMR trigger rate
   4. Table 4 (Stage 1 feature group ablation) is generated showing metrics per column-group mask including AUC-ROC
   5. All four tables are exported as valid LaTeX via `pd.to_latex()` and saved to disk
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 07-01-PLAN.md — Wave 0 test stubs for ablation table functions
+- [ ] 07-02-PLAN.md — Implement ablation_tables.py, v1.0 metrics retrieval, and LaTeX export
 
 ## Progress
 
@@ -80,4 +83,4 @@ Plans:
 | 4. REST API | v1.0 | 2/2 | Complete | 2026-03-19 |
 | 5. Leakage Fix and Baseline Retrain | v1.1 | 2/2 | Complete | 2026-04-14 |
 | 6. Ablation Infrastructure and Differentiator Features | 2/2 | Complete   | 2026-04-15 | - |
-| 7. Ablation Execution and Paper Tables | v1.1 | 0/TBD | Not started | - |
+| 7. Ablation Execution and Paper Tables | v1.1 | 0/2 | Not started | - |
