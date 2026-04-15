@@ -7,6 +7,9 @@ import numpy as np
 import pandas as pd
 from typing import List, Dict, Any, Optional
 
+_NEAR_DUP_SIM_THRESHOLD = 0.9
+
+
 def simple_linguistic_features(text: str) -> np.ndarray:
     if not text:
         return np.zeros(4, dtype=np.float32)
@@ -52,11 +55,24 @@ def extract_stage2_features(df: pd.DataFrame, embedder, max_msgs: int = 50, max_
             if probe_dim is None:
                 probe_dim = emb.shape[1]
             emb_pool = emb.mean(axis=0).astype(np.float32)
+            # FEAT-04: Cross-message cosine similarity (indices 395, 396)
+            if emb.shape[0] >= 2:
+                sim_matrix = emb @ emb.T  # cosine sim since embedder normalizes
+                n_msgs = sim_matrix.shape[0]
+                mask = ~np.eye(n_msgs, dtype=bool)
+                off_diag = sim_matrix[mask]
+                cross_msg_sim_mean = float(np.mean(off_diag))
+                near_dup_frac = float(np.mean(off_diag > _NEAR_DUP_SIM_THRESHOLD))
+            else:
+                cross_msg_sim_mean = 0.0
+                near_dup_frac = 0.0
         else:
             if probe_dim is None:
                 # fallback default if nothing encoded yet
                 probe_dim = 384
             emb_pool = np.zeros(probe_dim, dtype=np.float32)
+            cross_msg_sim_mean = 0.0
+            near_dup_frac = 0.0
 
         # linguistic aggregate (on message texts only)
         if len(messages) > 0:
@@ -102,7 +118,7 @@ def extract_stage2_features(df: pd.DataFrame, embedder, max_msgs: int = 50, max_
 
         temporal = np.array([rate, delta_mean, delta_std, cv_intervals, char_len_mean, char_len_std, hour_entropy], dtype=np.float32)
 
-        feat = np.concatenate([emb_pool, ling_pool, temporal], axis=0)
+        feat = np.concatenate([emb_pool, ling_pool, temporal, np.array([cross_msg_sim_mean, near_dup_frac], dtype=np.float32)], axis=0)
         rows.append(feat)
 
     return np.stack(rows, axis=0)
