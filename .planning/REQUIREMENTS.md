@@ -52,11 +52,11 @@ Requirements for the Feature Leakage Audit & Fix milestone.
 ### Ablation & Paper Tables
 
 - ~~**ABL-01**: Ablation runner supports force-routing to evaluate full test set at each stage~~ — **Obsolete**: `predict_system()` already runs all stages on all accounts unconditionally; `evaluate_s3()` already reports per-stage metrics (`p1`, `p12`, `p_final`) on the full test set. Force-routing provides no additional information.
-- [ ] **ABL-02**: Table 1 (leakage audit) generated: v1.0 vs v1.1 metrics on S3
+- [x] **ABL-02**: Table 1 (leakage audit) generated: v1.0 vs v1.1 metrics on S3
 - ~~**ABL-03**: Table 2 (stage contribution) generated: force-routed ablation per stage~~ — **Obsolete**: per-stage contribution is already in `evaluate_s3()` output (`p1`/`p12`/`p_final` rows). No separate ablation needed.
-- [ ] **ABL-04**: Table 3 (routing efficiency) generated: % stage exits + AMR trigger rate
-- [ ] **ABL-05**: Table 4 (Stage 1 feature group ablation) generated: per-column-group masking
-- [ ] **ABL-06**: All tables exported as LaTeX via `pd.to_latex()` and include AUC-ROC alongside F1
+- [x] **ABL-04**: Table 3 (routing efficiency) generated: % stage exits + AMR trigger rate
+- [x] **ABL-05**: Table 4 (Stage 1 feature group ablation) generated: per-column-group masking
+- [x] **ABL-06**: All tables exported as LaTeX via `pd.to_latex()` and include AUC-ROC alongside F1
 
 ## v2 Requirements
 
@@ -107,11 +107,11 @@ Deferred to a future milestone.
 | FEAT-03 | Phase 5 | Complete |
 | FEAT-04 | Phase 6 | Complete |
 | ABL-01 | — | Obsolete |
-| ABL-02 | Phase 7 | Pending |
+| ABL-02 | Phase 7 | Complete |
 | ABL-03 | — | Obsolete |
-| ABL-04 | Phase 7 | Pending |
-| ABL-05 | Phase 7 | Pending |
-| ABL-06 | Phase 7 | Pending |
+| ABL-04 | Phase 7 | Complete |
+| ABL-05 | Phase 7 | Complete |
+| ABL-06 | Phase 7 | Complete |
 
 **Coverage (v1.1):**
 - v1.1 requirements: 15 total (13 active, 2 obsolete: ABL-01, ABL-03)

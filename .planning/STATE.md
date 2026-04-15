@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Feature Leakage Audit & Fix
 status: completed
-stopped_at: Completed 06-02-PLAN.md — Phase 6 complete, v12 save in main.py, retrain user-approved
-last_updated: "2026-04-15T22:10:39.692Z"
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-04-15T22:54:10.317Z"
 last_activity: "2026-04-15 — 06-01 executed: FEAT-04 cross-message cosine similarity features added at indices 395-396"
 progress:
   total_phases: 3
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 6
+  completed_plans: 5
   percent: 33
 ---
 
@@ -48,6 +48,7 @@ Progress: [███░░░░░░░] 33%
 *Updated after each plan completion*
 | Phase 05 P01 | 30 | 3 tasks | 6 files |
 | Phase 06 P02 | 10 | 2 tasks | 1 files |
+| Phase 07 P01 | 1 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase 06-01]: FEAT-04 defaults to 0.0 for accounts with 0 or 1 messages; near-dup threshold = 0.9 (_NEAR_DUP_SIM_THRESHOLD constant)
 - [Phase 06-02]: v11 save preserved unchanged so 395-dim baseline artifact is available for Phase 7 ablation comparison; v12 appended after v11 in main.py
 - [Phase 06-02]: v11 save preserved unchanged so 395-dim baseline artifact is available for Phase 7 ablation comparison; v12 appended after v11 in main.py
+- [Phase 07-01]: Table 2 uses 3 rows (p1/p12/p_final), p2 excluded — Stage 2 alone on all accounts is not a cascade stage comparison
+- [Phase 07-01]: save_latex contract enforces float_format='%.4f'; test asserts '0.9000' string appears in LaTeX file content
 
 ### Pending Todos
 
@@ -85,6 +88,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-15T21:35:58.365Z
-Stopped at: Completed 06-02-PLAN.md — Phase 6 complete, v12 save in main.py, retrain user-approved
+Last session: 2026-04-15T22:54:10.314Z
+Stopped at: Completed 07-01-PLAN.md
 Resume file: None
