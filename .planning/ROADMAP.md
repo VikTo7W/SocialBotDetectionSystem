@@ -24,7 +24,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 **Milestone Goal:** Remove feature leakage from Stage 2a and AMR, retrain the full cascade on clean features, and produce paper-ready ablation tables documenting each stage's contribution.
 
 - [x] **Phase 5: Leakage Fix and Baseline Retrain** — Remove identity leakage from Stage 2a and AMR, add table-stakes behavioral features, retrain and recalibrate the full cascade (completed 2026-04-13)
-- [ ] **Phase 6: Ablation Infrastructure and Differentiator Features** — Build force-routing ablation runner, add cross-message similarity features
+- [x] **Phase 6: Ablation Infrastructure and Differentiator Features** — Build force-routing ablation runner, add cross-message similarity features (completed 2026-04-15)
 - [ ] **Phase 7: Ablation Execution and Paper Tables** — Run all ablation variants and generate four LaTeX paper tables
 
 ## Phase Details
@@ -53,7 +53,7 @@ Plans:
   1. `ablation.py` exists with an `AblationConfig` dataclass and force-routing threshold helpers that can route the full test set through any single stage
   2. Cross-message cosine similarity (mean pairwise) and near-duplicate fraction (sim > 0.9) are computed as Stage 2a features and appear in the trained feature set
   3. Running an ablation variant with force-routing to Stage 1 evaluates all S3 accounts at Stage 1 only (no accounts escalated to Stage 2 or 3)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 06-01-PLAN.md — Wave 0 test stubs, FEAT-04 cross-message similarity, ABL-01 ablation runner
 - [ ] 06-02-PLAN.md — Add v12 joblib save to main.py and retrain checkpoint
@@ -79,5 +79,5 @@ Plans:
 | 3. Evaluation | v1.0 | 1/1 | Complete | 2026-03-19 |
 | 4. REST API | v1.0 | 2/2 | Complete | 2026-03-19 |
 | 5. Leakage Fix and Baseline Retrain | v1.1 | 2/2 | Complete | 2026-04-14 |
-| 6. Ablation Infrastructure and Differentiator Features | 1/2 | In Progress|  | - |
+| 6. Ablation Infrastructure and Differentiator Features | 2/2 | Complete   | 2026-04-15 | - |
 | 7. Ablation Execution and Paper Tables | v1.1 | 0/TBD | Not started | - |

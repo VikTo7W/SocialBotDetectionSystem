@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Feature Leakage Audit & Fix
-status: in-progress
-stopped_at: "Phase 6 plan 01 complete — FEAT-04 implemented; ready to execute 06-02-PLAN.md (retrain to v12)"
-last_updated: "2026-04-15T00:00:00Z"
-last_activity: 2026-04-15 — Phase 6 planned; ABL-01/ABL-03 dropped (redundant with existing evaluate_s3 output)
+status: completed
+stopped_at: 06-02 Task 1 complete — v12 save added to main.py; awaiting user retrain at checkpoint Task 2
+last_updated: "2026-04-15T20:31:26.345Z"
+last_activity: "2026-04-15 — 06-01 executed: FEAT-04 cross-message cosine similarity features added at indices 395-396"
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 4
   percent: 33
 ---
 
@@ -70,6 +70,7 @@ Recent decisions affecting current work:
 - [Phase 06 planning]: Feature vector grows 395→397 with FEAT-04 (cross_msg_sim_mean at index 395, near_dup_frac at index 396)
 - [Phase 06-01]: NormalizedFakeEmbedder must be defined locally in test files — conftest.py is pytest-injected, not directly importable as a module
 - [Phase 06-01]: FEAT-04 defaults to 0.0 for accounts with 0 or 1 messages; near-dup threshold = 0.9 (_NEAR_DUP_SIM_THRESHOLD constant)
+- [Phase 06-02]: v11 save preserved unchanged so 395-dim baseline artifact is available for Phase 7 ablation comparison; v12 appended after v11 in main.py
 
 ### Pending Todos
 
@@ -82,6 +83,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-15T00:48:00Z
-Stopped at: 06-01-PLAN.md complete — FEAT-04 implemented (397-dim output); ready to execute 06-02-PLAN.md (retrain to v12)
+Last session: 2026-04-15T20:31:21.442Z
+Stopped at: 06-02 Task 1 complete — v12 save added to main.py; awaiting user retrain at checkpoint Task 2
 Resume file: None
