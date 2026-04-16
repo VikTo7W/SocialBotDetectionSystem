@@ -8,9 +8,9 @@
 
 ### LSTM Stage 2b Model
 
-- [ ] **LSTM-01**: Developer can train an LSTM-based Stage 2b model on BotSim-24 message sequences using the existing split discipline without introducing leakage
-- [ ] **LSTM-02**: The LSTM Stage 2b path produces a drop-in refinement output compatible with the current Stage 2 / meta-model flow, or an explicitly documented equivalent contract
-- [ ] **LSTM-03**: Sequence preprocessing for the LSTM path handles empty or short message histories deterministically and reproducibly
+- [x] **LSTM-01**: Developer can train an LSTM-based Stage 2b model on BotSim-24 message sequences using the existing split discipline without introducing leakage
+- [x] **LSTM-02**: The LSTM Stage 2b path produces a drop-in refinement output compatible with the current Stage 2 / meta-model flow, or an explicitly documented equivalent contract
+- [x] **LSTM-03**: Sequence preprocessing for the LSTM path handles empty or short message histories deterministically and reproducibly
 
 ### Cascade Integration
 
@@ -40,9 +40,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LSTM-01 | Phase 8 | Pending |
-| LSTM-02 | Phase 8 | Pending |
-| LSTM-03 | Phase 8 | Pending |
+| LSTM-01 | Phase 8 | Complete |
+| LSTM-02 | Phase 8 | Complete |
+| LSTM-03 | Phase 8 | Complete |
 | LSTM-04 | Phase 9 | Pending |
 | LSTM-05 | Phase 9 | Pending |
 | LSTM-06 | Phase 9 | Pending |

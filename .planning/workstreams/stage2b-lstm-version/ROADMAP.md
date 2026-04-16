@@ -29,7 +29,10 @@ phase_range: "8-10"
   1. Message-sequence preprocessing for the LSTM path is defined clearly and handles empty/short histories deterministically
   2. An LSTM Stage 2b model can be trained on BotSim-24 data under the existing seed and split conventions
   3. The LSTM path exposes outputs that can feed the current Stage 2 or meta-model flow, or the deviation is documented explicitly
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [x] 08-01-PLAN.md - Sequence contract and deterministic preprocessing
+- [x] 08-02-PLAN.md - Trainable LSTM prototype and fixture-backed contract proof
 
 ### Phase 9: Cascade Integration and Variant Selection
 **Goal**: The cascade can run with either the AMR delta-refiner baseline or the LSTM Stage 2b variant in a controlled, testable way
@@ -55,8 +58,8 @@ phase_range: "8-10"
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 8. LSTM Stage 2b Foundation | 0/? | Not started | - |
-| 9. Cascade Integration and Variant Selection | 0/? | Not started | - |
+| 8. LSTM Stage 2b Foundation | 2/2 | Complete | 2026-04-16 |
+| 9. Cascade Integration and Variant Selection | 0/? | Ready | - |
 | 10. Evaluation and Baseline Comparison | 0/? | Not started | - |
 
 ---

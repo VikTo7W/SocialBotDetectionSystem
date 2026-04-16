@@ -4,9 +4,9 @@ workstream: stage2b-lstm-version
 milestone: v1.2.1
 milestone_name: Stage 2b LSTM Variant
 created: 2026-04-16
-status: ready_to_execute
-stopped_at: Phase 8 planned; ready for execution
-last_updated: "2026-04-16T20:20:00Z"
+status: ready_to_discuss
+stopped_at: Phase 8 complete; Phase 9 ready for discussion
+last_updated: "2026-04-16T20:36:00Z"
 ---
 
 # Project State
@@ -16,25 +16,25 @@ last_updated: "2026-04-16T20:20:00Z"
 See: `.planning/workstreams/stage2b-lstm-version/PROJECT.md`
 
 **Core value:** The cascade must still produce a single, well-calibrated bot probability per account while letting us test whether a sequence-model Stage 2b adds useful signal beyond the current AMR-inspired refinement path.
-**Current focus:** Execute Phase 8 to establish the LSTM Stage 2b sequence contract and fixture-backed `z2`-compatible prototype.
+**Current focus:** Prepare Phase 9 integration work for selecting the LSTM Stage 2b path inside the cascade without breaking the AMR baseline.
 
 ## Current Position
-**Status:** Planned
-**Current Phase:** Phase 8 - LSTM Stage 2b Foundation
+**Status:** Phase 8 complete
+**Current Phase:** Phase 9 - Cascade Integration and Variant Selection
 **Last Activity:** 2026-04-16
-**Last Activity Description:** Phase 8 plans and verification criteria created
+**Last Activity Description:** Phase 8 executed and verified; LSTM Stage 2b foundation is ready for integration planning
 
 ## Progress
-**Phases Complete:** 0
-**Current Plan:** 08-01 and 08-02 ready for execution
+**Phases Complete:** 1
+**Current Plan:** Ready for discussion
 
 ## Blockers/Concerns
 
-- The existing Stage 2b path is implemented as an AMR-inspired delta refiner over Stage 2a logits, so the LSTM variant needs a clear compatibility contract instead of an ad hoc branch.
-- Sequence modeling introduces preprocessing and batching decisions that can quietly affect reproducibility if they are not pinned down early.
-- This milestone must preserve the AMR baseline so any LSTM result is comparable rather than anecdotal.
+- The LSTM foundation is now in place, but it is not yet wired into `train_system()` or `predict_system()`.
+- Phase 9 must preserve clean variant selection semantics so the AMR and LSTM paths are comparable rather than tangled.
+- The fixture-backed proof is intentionally narrower than a real-data benchmark; that comparison belongs later.
 
 ## Session Continuity
 **Last Session:** 2026-04-16
-**Stopped At:** Phase 8 planned; ready for execution
-**Resume File:** .planning/workstreams/stage2b-lstm-version/phases/08-lstm-stage-2b-foundation/08-01-PLAN.md
+**Stopped At:** Phase 8 complete; Phase 9 ready for discussion
+**Resume File:** .planning/workstreams/stage2b-lstm-version/ROADMAP.md
