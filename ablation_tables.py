@@ -1,11 +1,12 @@
 """
-ablation_tables.py — Generate all four paper ablation tables.
+ablation_tables.py — Generate all five paper ablation tables.
 
 Produces:
   Table 1: Leakage audit — v1.0 (leaky) vs v1.1 (clean) S3 metrics
   Table 2: Stage contribution — p1, p12, p_final cascade stages
   Table 3: Routing efficiency — stage exit percentages and AMR trigger rate
   Table 4: Stage 1 feature group ablation — baseline vs masked variants
+  Table 5: Cross-dataset comparison — BotSim-24 (Reddit, in-dist.) vs TwiBot-20 (Twitter, zero-shot)
 
 Usage:
     python ablation_tables.py
@@ -14,6 +15,7 @@ Requires:
     - trained_system_v12.joblib (v1.2 trained system)
     - results_v10.json (v1.0 S3 metrics from git worktree retrain)
     - Users.csv, user_post_comment.json, edge_index.pt, edge_type.pt, edge_weight.pt
+    - metrics_twibot20.json (TwiBot-20 evaluate_s3() output — run evaluate_twibot20.py first)
 """
 
 import json
@@ -160,6 +162,33 @@ def build_table4(group_metrics: dict) -> pd.DataFrame:
             "Recall":    m["recall"],
         })
     return pd.DataFrame(rows)
+
+
+def generate_cross_dataset_table(
+    botsim24_metrics: dict,
+    twibot20_metrics: dict,
+) -> pd.DataFrame:
+    """
+    Table 5 — Cross-Dataset Comparison: BotSim-24 (in-distribution) vs TwiBot-20 (zero-shot).
+
+    Both inputs are full evaluate_s3() return dicts with keys "overall", "per_stage", "routing".
+    This function reads metrics["overall"] for the table rows (per D-06, D-07).
+
+    Args:
+        botsim24_metrics: evaluate_s3() return dict for BotSim-24 S3 test set.
+        twibot20_metrics: evaluate_s3() return dict for TwiBot-20 test set.
+
+    Returns:
+        DataFrame with columns ["Metric", "BotSim-24 (Reddit, in-dist.)", "TwiBot-20 (Twitter, zero-shot)"]
+        and 4 rows: F1, AUC-ROC, Precision, Recall.
+    """
+    bs = botsim24_metrics["overall"]
+    tw = twibot20_metrics["overall"]
+    return pd.DataFrame({
+        "Metric": ["F1", "AUC-ROC", "Precision", "Recall"],
+        "BotSim-24 (Reddit, in-dist.)": [bs["f1"], bs["auc"], bs["precision"], bs["recall"]],
+        "TwiBot-20 (Twitter, zero-shot)": [tw["f1"], tw["auc"], tw["precision"], tw["recall"]],
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -315,13 +344,27 @@ def main():
     df_t4 = build_table4(group_metrics)
     print(df_t4.to_string(index=False))
 
-    # 7. Export all to LaTeX
+    # 7. Export Tables 1–4 to LaTeX
     os.makedirs("tables", exist_ok=True)
     save_latex(df_t1, "tables/table1_leakage_audit.tex")
     save_latex(df_t2, "tables/table2_stage_contribution.tex")
     save_latex(df_t3, "tables/table3_routing_efficiency.tex")
     save_latex(df_t4, "tables/table4_feature_group_ablation.tex")
-    print("\nAll 4 tables exported to tables/*.tex")
+
+    # 8. Table 5 — Cross-Dataset Comparison (TW-07)
+    metrics_twibot20_path = "metrics_twibot20.json"
+    if os.path.exists(metrics_twibot20_path):
+        with open(metrics_twibot20_path) as f:
+            twibot20_metrics = json.load(f)
+        df_t5 = generate_cross_dataset_table(report, twibot20_metrics)
+        print("\n=== Table 5: Cross-Dataset Comparison ===")
+        print(df_t5.to_string(index=False))
+        save_latex(df_t5, "tables/table5_cross_dataset.tex")
+        print("\nAll 5 tables exported to tables/*.tex")
+    else:
+        print(f"\n[SKIP] Table 5: {metrics_twibot20_path} not found.")
+        print("Run 'python evaluate_twibot20.py' first to generate TwiBot-20 metrics.")
+        print("\n4 tables exported to tables/*.tex (Table 5 skipped)")
 
 
 if __name__ == "__main__":
