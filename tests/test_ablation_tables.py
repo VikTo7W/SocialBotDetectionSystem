@@ -9,7 +9,7 @@ That is the expected RED state.
 """
 
 import pandas as pd
-from ablation_tables import build_table1, build_table2, build_table3, build_table4, save_latex
+from ablation_tables import build_table1, build_table2, build_table3, build_table4, save_latex, generate_cross_dataset_table
 
 # ---------------------------------------------------------------------------
 # Module-level synthetic fixtures (plain dicts, no pytest fixtures needed)
@@ -51,6 +51,29 @@ MOCK_GROUP_METRICS = {
     "comment_counts":      {"f1": 0.85, "auc": 0.92, "precision": 0.84, "recall": 0.86},
     "subreddit_breadth":   {"f1": 0.89, "auc": 0.95, "precision": 0.88, "recall": 0.90},
     "post_comment_ratios": {"f1": 0.86, "auc": 0.93, "precision": 0.85, "recall": 0.87},
+}
+
+# Full evaluate_s3() return structure for cross-dataset table tests
+MOCK_BOTSIM24_FULL = {
+    "overall": {"f1": 0.9200, "auc": 0.9700, "precision": 0.9100, "recall": 0.9300},
+    "per_stage": MOCK_PER_STAGE,
+    "routing": MOCK_ROUTING,
+}
+
+MOCK_TWIBOT20_FULL = {
+    "overall": {"f1": 0.7500, "auc": 0.8200, "precision": 0.7100, "recall": 0.7900},
+    "per_stage": {
+        "p1":      {"f1": 0.60, "auc": 0.70, "precision": 0.62, "recall": 0.58},
+        "p2":      {"f1": 0.65, "auc": 0.73, "precision": 0.66, "recall": 0.64},
+        "p12":     {"f1": 0.72, "auc": 0.80, "precision": 0.73, "recall": 0.71},
+        "p_final": {"f1": 0.75, "auc": 0.82, "precision": 0.71, "recall": 0.79},
+    },
+    "routing": {
+        "pct_stage1_exit": 50.0,
+        "pct_stage2_exit": 30.0,
+        "pct_stage3_exit": 20.0,
+        "pct_amr_triggered": 50.0,
+    },
 }
 
 # ---------------------------------------------------------------------------
@@ -168,3 +191,57 @@ def test_latex_all_tables(tmp_path):
         assert r"\begin{tabular}" in content, (
             rf"table{i}.tex must contain \begin{{tabular}}"
         )
+
+
+def test_table5_cross_dataset():
+    """Table 5: Cross-dataset — BotSim-24 vs TwiBot-20 p_final metrics side-by-side."""
+    df = generate_cross_dataset_table(MOCK_BOTSIM24_FULL, MOCK_TWIBOT20_FULL)
+
+    assert isinstance(df, pd.DataFrame), "generate_cross_dataset_table must return pd.DataFrame"
+    assert df.shape == (4, 3), f"Expected shape (4, 3), got {df.shape}"
+    assert list(df.columns) == [
+        "Metric",
+        "BotSim-24 (Reddit, in-dist.)",
+        "TwiBot-20 (Twitter, zero-shot)",
+    ], f"Unexpected columns: {list(df.columns)}"
+    assert list(df["Metric"]) == ["F1", "AUC-ROC", "Precision", "Recall"], (
+        f"Unexpected Metric values: {list(df['Metric'])}"
+    )
+    # Check values come from overall dict
+    assert df.loc[df["Metric"] == "F1", "BotSim-24 (Reddit, in-dist.)"].iloc[0] == 0.9200
+    assert df.loc[df["Metric"] == "F1", "TwiBot-20 (Twitter, zero-shot)"].iloc[0] == 0.7500
+
+
+def test_table5_uses_overall_key():
+    """Table 5: function reads metrics['overall'], not top-level keys."""
+    # Pass dicts with different top-level vs overall values to prove it reads overall
+    botsim = {
+        "overall": {"f1": 0.91, "auc": 0.96, "precision": 0.90, "recall": 0.92},
+        "per_stage": {},
+        "routing": {},
+    }
+    twibot = {
+        "overall": {"f1": 0.74, "auc": 0.81, "precision": 0.70, "recall": 0.78},
+        "per_stage": {},
+        "routing": {},
+    }
+    df = generate_cross_dataset_table(botsim, twibot)
+    assert df.loc[df["Metric"] == "F1", "BotSim-24 (Reddit, in-dist.)"].iloc[0] == 0.91
+    assert df.loc[df["Metric"] == "F1", "TwiBot-20 (Twitter, zero-shot)"].iloc[0] == 0.74
+
+
+def test_table5_latex(tmp_path):
+    """Table 5 LaTeX: valid tabular with correct column headers."""
+    df = generate_cross_dataset_table(MOCK_BOTSIM24_FULL, MOCK_TWIBOT20_FULL)
+    out_path = str(tmp_path / "table5.tex")
+    save_latex(df, out_path)
+
+    import os
+    assert os.path.exists(out_path), f"LaTeX file not found at {out_path}"
+    content = open(out_path).read()
+    assert r"\begin{tabular}" in content
+    assert r"\end{tabular}" in content
+    assert "BotSim-24" in content
+    assert "TwiBot-20" in content
+    assert "0.9200" in content  # BotSim-24 F1 formatted to 4 decimals
+    assert "0.7500" in content  # TwiBot-20 F1 formatted to 4 decimals
