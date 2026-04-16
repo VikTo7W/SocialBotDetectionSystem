@@ -4,9 +4,9 @@ workstream: calibration-fix
 milestone: v1.1.1
 milestone_name: Threshold Calibration Search Fix
 created: 2026-04-16
-status: ready_to_discuss
-stopped_at: Milestone initialized; ready to discuss Phase 8
-last_updated: "2026-04-16T00:00:00Z"
+status: ready_to_execute
+stopped_at: Phase 8 planned; ready to execute 08-01 then 08-02
+last_updated: "2026-04-16T00:30:00Z"
 ---
 
 # Project State
@@ -16,21 +16,17 @@ last_updated: "2026-04-16T00:00:00Z"
 See: `.planning/workstreams/calibration-fix/PROJECT.md`
 
 **Core value:** Calibration should produce a meaningful threshold policy, not spend repeated trials rediscovering an identical plateau.
-**Current focus:** Initialize a focused fix for the degenerate threshold search in `calibrate_thresholds()`.
+**Current focus:** Execute Phase 8 plans to diagnose and fix the degenerate threshold search in `calibrate_thresholds()`.
 
 ## Current Position
-**Status:** Context gathered
+**Status:** Ready to execute
 **Current Phase:** Phase 8 - Calibration Signal Recovery
 **Last Activity:** 2026-04-16
-**Last Activity Description:** Phase 8 context captured for calibration signal recovery
+**Last Activity Description:** Phase 8 planned with 2 execution plans
 
 ## Progress
 **Phases Complete:** 0 / 2
-**Current Plan:** Ready for planning
-
-## Pending Todos
-
-- Confirm whether the fix should prefer early stopping on a flat objective, a smoother optimization objective, or both.
+**Current Plan:** 2 plans ready for execution
 
 ## Blockers/Concerns
 
@@ -39,5 +35,5 @@ See: `.planning/workstreams/calibration-fix/PROJECT.md`
 
 ## Session Continuity
 **Last Session:** 2026-04-16
-**Stopped At:** Phase 8 context gathered
-**Resume File:** .planning/workstreams/calibration-fix/phases/08-calibration-signal-recovery/08-CONTEXT.md
+**Stopped At:** Phase 8 planned; ready to execute 08-01 then 08-02
+**Resume File:** .planning/workstreams/calibration-fix/phases/08-calibration-signal-recovery/08-01-PLAN.md
