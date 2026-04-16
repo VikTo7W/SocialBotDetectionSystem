@@ -717,13 +717,14 @@ def train_system(
     random_state: int = 42,
     nodes_total: Optional[int] = None,
     stage2b_variant: str = "amr",
+    embedder: Optional[TextEmbedder] = None,
 ) -> TrainedSystem:
     """
     Train stage models on S1.
     Train meta12/meta123 on S2 using OOF meta12 predictions.
     """
     stage2b_variant = normalize_stage2b_variant(stage2b_variant)
-    embedder = TextEmbedder()
+    embedder = embedder or TextEmbedder()
 
     # ---- Stage 1 training on S1
     print("Stage 1 training on S1")

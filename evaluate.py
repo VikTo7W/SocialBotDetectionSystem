@@ -9,6 +9,9 @@ labels, then prints a complete paper-ready evaluation report:
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from sklearn.metrics import f1_score, roc_auc_score, precision_score, recall_score
@@ -35,10 +38,23 @@ def _compute_metrics(y_true: np.ndarray, p: np.ndarray, threshold: float) -> dic
     }
 
 
+def _json_ready(value):
+    if isinstance(value, dict):
+        return {str(k): _json_ready(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_json_ready(v) for v in value]
+    if isinstance(value, tuple):
+        return [_json_ready(v) for v in value]
+    if isinstance(value, np.generic):
+        return value.item()
+    return value
+
+
 def evaluate_s3(
     results: pd.DataFrame,
     y_true: np.ndarray,
     threshold: float = 0.5,
+    verbose: bool = True,
 ) -> dict:
     """
     Evaluate cascade system output against ground truth labels.
@@ -110,13 +126,118 @@ def evaluate_s3(
     # ------------------------------------------------------------------
     # 4. Print paper-ready report
     # ------------------------------------------------------------------
-    _print_report(overall, per_stage, routing)
+    if verbose:
+        _print_report(overall, per_stage, routing)
 
     return {
         "overall":   overall,
         "per_stage": per_stage,
         "routing":   routing,
     }
+
+
+def compare_stage2b_variants(
+    reports_by_variant: dict[str, dict],
+    *,
+    primary_metric: str = "f1",
+    baseline_variant: str = "amr",
+    challenger_variant: str = "lstm",
+    metric_margin: float = 0.01,
+    auc_margin: float = 0.01,
+) -> dict:
+    """
+    Compare two Stage 2b variants using both headline metrics and routing behavior.
+
+    Returns a compact recommendation-ready summary that can stay neutral when the
+    challenger is only different, not clearly better.
+    """
+    baseline = reports_by_variant[baseline_variant]
+    challenger = reports_by_variant[challenger_variant]
+
+    baseline_metric = float(baseline["overall"][primary_metric])
+    challenger_metric = float(challenger["overall"][primary_metric])
+    primary_delta = challenger_metric - baseline_metric
+
+    baseline_auc = float(baseline["overall"]["auc"])
+    challenger_auc = float(challenger["overall"]["auc"])
+    auc_delta = challenger_auc - baseline_auc
+
+    metric_deltas = {
+        metric: float(challenger["overall"][metric] - baseline["overall"][metric])
+        for metric in ("f1", "auc", "precision", "recall")
+    }
+    routing_deltas = {
+        key: float(challenger["routing"][key] - baseline["routing"][key])
+        for key in (
+            "pct_stage1_exit",
+            "pct_stage2_exit",
+            "pct_stage3_exit",
+            "pct_amr_triggered",
+        )
+    }
+
+    if primary_delta >= metric_margin:
+        recommendation = {
+            "status": "challenger_better",
+            "recommended_variant": challenger_variant,
+            "rationale": (
+                f"{challenger_variant} exceeds {baseline_variant} on {primary_metric} "
+                f"by {primary_delta:.4f}, which clears the recommendation margin."
+            ),
+        }
+    elif primary_delta <= -metric_margin:
+        recommendation = {
+            "status": "baseline_better",
+            "recommended_variant": baseline_variant,
+            "rationale": (
+                f"{challenger_variant} trails {baseline_variant} on {primary_metric} "
+                f"by {abs(primary_delta):.4f}, so the baseline remains preferred."
+            ),
+        }
+    elif auc_delta >= auc_margin and primary_delta >= 0.0:
+        recommendation = {
+            "status": "challenger_better",
+            "recommended_variant": challenger_variant,
+            "rationale": (
+                f"{primary_metric} is effectively tied, but {challenger_variant} improves AUC "
+                f"by {auc_delta:.4f} without losing on the primary metric."
+            ),
+        }
+    else:
+        recommendation = {
+            "status": "neutral_keep_baseline",
+            "recommended_variant": baseline_variant,
+            "rationale": (
+                f"{challenger_variant} is not clearly better than {baseline_variant} on "
+                f"{primary_metric} plus routing evidence, so the baseline stays recommended."
+            ),
+        }
+
+    return {
+        "policy": {
+            "primary_metric": primary_metric,
+            "baseline_variant": baseline_variant,
+            "challenger_variant": challenger_variant,
+            "metric_margin": float(metric_margin),
+            "auc_margin": float(auc_margin),
+            "evaluation_rule": "metric_plus_routing",
+        },
+        "variants": {
+            baseline_variant: baseline,
+            challenger_variant: challenger,
+        },
+        "overall_deltas": metric_deltas,
+        "routing_deltas": routing_deltas,
+        "recommendation": recommendation,
+    }
+
+
+def write_stage2b_comparison_artifact(summary: dict, path: str | Path) -> dict:
+    """Write a compact JSON artifact for Phase 10 AMR-vs-LSTM comparison evidence."""
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(_json_ready(summary), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return summary
 
 
 def _print_report(overall: dict, per_stage: dict, routing: dict) -> None:

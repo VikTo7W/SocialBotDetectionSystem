@@ -1,5 +1,5 @@
 """
-ablation_tables.py — Generate all five paper ablation tables.
+ablation_tables.py — Generate all paper ablation tables.
 
 Produces:
   Table 1: Leakage audit — v1.0 (leaky) vs v1.1 (clean) S3 metrics
@@ -7,12 +7,15 @@ Produces:
   Table 3: Routing efficiency — stage exit percentages and AMR trigger rate
   Table 4: Stage 1 feature group ablation — baseline vs masked variants
   Table 5: Cross-dataset comparison — BotSim-24 (Reddit, in-dist.) vs TwiBot-20 (Twitter, zero-shot)
+  Table 5 (stage2b): Stage 2b variant comparison — AMR vs LSTM overall metrics
+  Table 6 (stage2b): Stage 2b routing comparison — AMR vs LSTM routing behavior
 
 Usage:
     python ablation_tables.py
 
 Requires:
     - trained_system_v12.joblib (v1.2 trained system)
+    - .planning/workstreams/stage2b-lstm-version/phases/10-evaluation-and-baseline-comparison/10-real-run-variant-comparison.json
     - results_v10.json (v1.0 S3 metrics from git worktree retrain)
     - Users.csv, user_post_comment.json, edge_index.pt, edge_type.pt, edge_weight.pt
     - metrics_twibot20.json (TwiBot-20 evaluate_s3() output — run evaluate_twibot20.py first)
@@ -191,6 +194,40 @@ def generate_cross_dataset_table(
     })
 
 
+def build_table5(variant_comparison: dict) -> pd.DataFrame:
+    """Stage 2b variant comparison on overall metrics (supplementary)."""
+    rows = []
+    for variant in ("amr", "lstm"):
+        overall = variant_comparison["variants"][variant]["overall"]
+        rows.append(
+            {
+                "Variant": variant.upper(),
+                "F1": overall["f1"],
+                "AUC-ROC": overall["auc"],
+                "Precision": overall["precision"],
+                "Recall": overall["recall"],
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def build_table6(variant_comparison: dict) -> pd.DataFrame:
+    """Stage 2b variant routing comparison (supplementary)."""
+    rows = []
+    for variant in ("amr", "lstm"):
+        routing = variant_comparison["variants"][variant]["routing"]
+        rows.append(
+            {
+                "Variant": variant.upper(),
+                "Stage 1 Exit %": routing["pct_stage1_exit"],
+                "Stage 2 Exit %": routing["pct_stage2_exit"],
+                "Stage 3 Exit %": routing["pct_stage3_exit"],
+                "Stage 2b Route %": routing["pct_amr_triggered"],
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 # ---------------------------------------------------------------------------
 # LaTeX export
 # ---------------------------------------------------------------------------
@@ -257,6 +294,10 @@ def masked_predict(sys_obj, S3, edges_S3, nodes_total, mask_cols):
 
 def main():
     SEED = 42
+    variant_artifact = (
+        ".planning/workstreams/stage2b-lstm-version/phases/"
+        "10-evaluation-and-baseline-comparison/10-real-run-variant-comparison.json"
+    )
 
     # 1. Load data and reconstruct S3 split (identical to main.py)
     users = load_users_csv("Users.csv")
@@ -365,6 +406,19 @@ def main():
         print(f"\n[SKIP] Table 5: {metrics_twibot20_path} not found.")
         print("Run 'python evaluate_twibot20.py' first to generate TwiBot-20 metrics.")
         print("\n4 tables exported to tables/*.tex (Table 5 skipped)")
+
+    # 9. Stage 2b supplementary tables (optional — requires variant comparison artifact)
+    if os.path.exists(variant_artifact):
+        with open(variant_artifact, encoding="utf-8") as f:
+            variant_comparison = json.load(f)
+        df_s2b_5 = build_table5(variant_comparison)
+        df_s2b_6 = build_table6(variant_comparison)
+        print("\n=== Stage 2b Variant Comparison ===")
+        print(df_s2b_5.to_string(index=False))
+        print("\n=== Stage 2b Routing Comparison ===")
+        print(df_s2b_6.to_string(index=False))
+        save_latex(df_s2b_5, "tables/table5_stage2b_variant_comparison.tex")
+        save_latex(df_s2b_6, "tables/table6_stage2b_routing_comparison.tex")
 
 
 if __name__ == "__main__":

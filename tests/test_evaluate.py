@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from evaluate import evaluate_s3
+from evaluate import compare_stage2b_variants, evaluate_s3
 
 
 # ---------------------------------------------------------------------------
@@ -261,3 +261,41 @@ class TestIntegrationWithMinimalSystem:
         routing = report["routing"]
         total = routing["pct_stage1_exit"] + routing["pct_stage2_exit"] + routing["pct_stage3_exit"]
         assert abs(total - 100.0) < 0.01, f"Exit percentages sum to {total:.4f}"
+
+
+class TestStage2BVariantComparison:
+    def test_compare_stage2b_variants_returns_metric_and_routing_deltas(self):
+        y_true = _make_y_true()
+        amr_results = _make_results_df(seed=1)
+        lstm_results = _make_results_df(seed=2)
+
+        reports = {
+            "amr": evaluate_s3(amr_results, y_true, verbose=False),
+            "lstm": evaluate_s3(lstm_results, y_true, verbose=False),
+        }
+        comparison = compare_stage2b_variants(reports)
+
+        assert set(comparison["variants"].keys()) == {"amr", "lstm"}
+        assert set(comparison["overall_deltas"].keys()) == {"f1", "auc", "precision", "recall"}
+        assert set(comparison["routing_deltas"].keys()) == {
+            "pct_stage1_exit", "pct_stage2_exit", "pct_stage3_exit", "pct_amr_triggered"
+        }
+        assert comparison["policy"]["evaluation_rule"] == "metric_plus_routing"
+        assert "recommended_variant" in comparison["recommendation"]
+        assert "rationale" in comparison["recommendation"]
+
+    def test_compare_stage2b_variants_can_stay_neutral_when_metrics_are_close(self):
+        y_true = _make_y_true()
+        amr_results = _make_results_df(seed=3)
+        lstm_results = amr_results.copy()
+        lstm_results["p_final"] = np.clip(lstm_results["p_final"] + 0.002, 0.0, 1.0)
+        lstm_results["amr_used"] = 1 - lstm_results["amr_used"]
+
+        reports = {
+            "amr": evaluate_s3(amr_results, y_true, verbose=False),
+            "lstm": evaluate_s3(lstm_results, y_true, verbose=False),
+        }
+        comparison = compare_stage2b_variants(reports, metric_margin=0.05, auc_margin=0.05)
+
+        assert comparison["recommendation"]["status"] == "neutral_keep_baseline"
+        assert comparison["recommendation"]["recommended_variant"] == "amr"
