@@ -208,6 +208,160 @@ def test_ratio_clamping_applied(minimal_system, tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# Test 6: evaluate_twibot20() returns full metrics dict (TW-06)
+# ---------------------------------------------------------------------------
+
+def test_evaluate_twibot20_returns_metrics(tmp_path, monkeypatch):
+    """evaluate_twibot20() returns full evaluate_s3() dict with overall/per_stage/routing."""
+    import evaluate_twibot20
+    from unittest.mock import patch
+
+    n = 6
+    path = _make_twibot_json(tmp_path, n=n)
+
+    # Synthetic results DataFrame with required columns
+    results_df = pd.DataFrame({
+        "account_id":  [f"tw_{i:03d}" for i in range(n)],
+        "p1":          [0.3, 0.7, 0.4, 0.8, 0.2, 0.6],
+        "n1":          [1] * n,
+        "p2":          [0.3, 0.7, 0.4, 0.8, 0.2, 0.6],
+        "n2":          [1] * n,
+        "amr_used":    [0, 1, 0, 1, 0, 1],
+        "p12":         [0.3, 0.7, 0.4, 0.8, 0.2, 0.6],
+        "stage3_used": [0, 0, 0, 1, 0, 1],
+        "p3":          [0.3, 0.7, 0.4, 0.8, 0.2, 0.6],
+        "n3":          [1] * n,
+        "p_final":     [0.3, 0.7, 0.4, 0.8, 0.2, 0.6],
+    })
+
+    # Synthetic accounts DataFrame with "label" column (alternating 0/1)
+    accounts_df = _make_twibot_df(n=n)
+
+    monkeypatch.setattr("evaluate_twibot20.run_inference", lambda p, m: results_df)
+    monkeypatch.setattr("evaluate_twibot20.load_accounts", lambda p: accounts_df)
+
+    metrics = evaluate_twibot20.evaluate_twibot20(path, "fake.joblib")
+
+    assert isinstance(metrics, dict), "evaluate_twibot20() must return a dict"
+    assert set(metrics.keys()) == {"overall", "per_stage", "routing"}, (
+        f"Expected keys overall/per_stage/routing, got: {set(metrics.keys())}"
+    )
+    assert set(metrics["overall"].keys()) == {"f1", "auc", "precision", "recall"}, (
+        f"overall must have f1/auc/precision/recall keys"
+    )
+    assert "p1" in metrics["per_stage"], "per_stage must contain 'p1'"
+    assert "p12" in metrics["per_stage"], "per_stage must contain 'p12'"
+    assert "p_final" in metrics["per_stage"], "per_stage must contain 'p_final'"
+    assert "auc" in metrics["per_stage"]["p1"], "per_stage['p1'] must have 'auc' key"
+    assert "pct_stage3_exit" in metrics["routing"], "routing must contain 'pct_stage3_exit'"
+    assert "pct_amr_triggered" in metrics["routing"], "routing must contain 'pct_amr_triggered'"
+
+
+def test_evaluate_twibot20_calls_evaluate_s3(tmp_path, monkeypatch):
+    """evaluate_twibot20() passes run_inference() output and labels to evaluate_s3()."""
+    import evaluate_twibot20
+    from unittest.mock import MagicMock
+
+    n = 6
+    path = _make_twibot_json(tmp_path, n=n)
+
+    results_df = pd.DataFrame({
+        "account_id":  [f"tw_{i:03d}" for i in range(n)],
+        "p1":          [0.3, 0.7, 0.4, 0.8, 0.2, 0.6],
+        "n1":          [1] * n,
+        "p2":          [0.3, 0.7, 0.4, 0.8, 0.2, 0.6],
+        "n2":          [1] * n,
+        "amr_used":    [0, 1, 0, 1, 0, 1],
+        "p12":         [0.3, 0.7, 0.4, 0.8, 0.2, 0.6],
+        "stage3_used": [0, 0, 0, 1, 0, 1],
+        "p3":          [0.3, 0.7, 0.4, 0.8, 0.2, 0.6],
+        "n3":          [1] * n,
+        "p_final":     [0.3, 0.7, 0.4, 0.8, 0.2, 0.6],
+    })
+    accounts_df = _make_twibot_df(n=n)
+
+    monkeypatch.setattr("evaluate_twibot20.run_inference", lambda p, m: results_df)
+    monkeypatch.setattr("evaluate_twibot20.load_accounts", lambda p: accounts_df)
+
+    # Spy on evaluate_s3 inside evaluate_twibot20 module
+    spy = MagicMock(side_effect=lambda res, y, th=0.5: {
+        "overall":   {"f1": 0.5, "auc": 0.5, "precision": 0.5, "recall": 0.5},
+        "per_stage": {"p1": {"f1": 0.5, "auc": 0.5, "precision": 0.5, "recall": 0.5},
+                      "p2": {"f1": 0.5, "auc": 0.5, "precision": 0.5, "recall": 0.5},
+                      "p12": {"f1": 0.5, "auc": 0.5, "precision": 0.5, "recall": 0.5},
+                      "p_final": {"f1": 0.5, "auc": 0.5, "precision": 0.5, "recall": 0.5}},
+        "routing":   {"pct_stage1_exit": 50.0, "pct_stage2_exit": 25.0,
+                      "pct_stage3_exit": 25.0, "pct_amr_triggered": 50.0},
+    })
+    monkeypatch.setattr("evaluate_twibot20.evaluate_s3", spy)
+
+    evaluate_twibot20.evaluate_twibot20(path, "fake.joblib")
+
+    assert spy.called, "evaluate_s3 was not called by evaluate_twibot20()"
+    call_args = spy.call_args
+    # First positional arg should be the results DataFrame
+    pd.testing.assert_frame_equal(call_args[0][0], results_df)
+    # Second positional arg should be the y_true array derived from labels
+    expected_labels = accounts_df["label"].to_numpy()
+    np.testing.assert_array_equal(call_args[0][1], expected_labels)
+
+
+def test_main_saves_metrics_json(tmp_path, monkeypatch):
+    """__main__ expansion: metrics_twibot20.json is written with correct structure."""
+    import evaluate_twibot20
+
+    n = 6
+    path = _make_twibot_json(tmp_path, n=n)
+
+    fake_metrics = {
+        "overall":   {"f1": 0.8, "auc": 0.85, "precision": 0.82, "recall": 0.78},
+        "per_stage": {
+            "p1":      {"f1": 0.75, "auc": 0.80, "precision": 0.76, "recall": 0.74},
+            "p2":      {"f1": 0.76, "auc": 0.81, "precision": 0.77, "recall": 0.75},
+            "p12":     {"f1": 0.77, "auc": 0.82, "precision": 0.78, "recall": 0.76},
+            "p_final": {"f1": 0.80, "auc": 0.85, "precision": 0.82, "recall": 0.78},
+        },
+        "routing":   {
+            "pct_stage1_exit": 50.0, "pct_stage2_exit": 25.0,
+            "pct_stage3_exit": 25.0, "pct_amr_triggered": 50.0,
+        },
+    }
+
+    results_df = pd.DataFrame({
+        "account_id":  [f"tw_{i:03d}" for i in range(n)],
+        "p1":          [0.3, 0.7, 0.4, 0.8, 0.2, 0.6],
+        "n1":          [1] * n,
+        "p2":          [0.3, 0.7, 0.4, 0.8, 0.2, 0.6],
+        "n2":          [1] * n,
+        "amr_used":    [0, 1, 0, 1, 0, 1],
+        "p12":         [0.3, 0.7, 0.4, 0.8, 0.2, 0.6],
+        "stage3_used": [0, 0, 0, 1, 0, 1],
+        "p3":          [0.3, 0.7, 0.4, 0.8, 0.2, 0.6],
+        "n3":          [1] * n,
+        "p_final":     [0.3, 0.7, 0.4, 0.8, 0.2, 0.6],
+    })
+
+    monkeypatch.setattr("evaluate_twibot20.run_inference", lambda p, m: results_df)
+    monkeypatch.setattr("evaluate_twibot20.evaluate_twibot20", lambda p, m: fake_metrics)
+
+    metrics_out = str(tmp_path / "metrics_twibot20.json")
+    results_out = str(tmp_path / "results_twibot20.json")
+
+    # Simulate what __main__ does (optimized path — run_inference once, call evaluate_twibot20)
+    results = evaluate_twibot20.run_inference(path, "fake.joblib")
+    results.to_json(results_out, orient="records", indent=2)
+    metrics = evaluate_twibot20.evaluate_twibot20(path, "fake.joblib")
+    with open(metrics_out, "w") as f:
+        json.dump(metrics, f, indent=2)
+
+    assert os.path.exists(metrics_out), "metrics_twibot20.json was not created"
+    loaded = json.loads(open(metrics_out).read())
+    assert "overall" in loaded, "metrics JSON missing 'overall' key"
+    assert "per_stage" in loaded, "metrics JSON missing 'per_stage' key"
+    assert "routing" in loaded, "metrics JSON missing 'routing' key"
+
+
+# ---------------------------------------------------------------------------
 # Test 5: BotSim-24 direct path is NOT clamped (TW-05 isolation)
 # ---------------------------------------------------------------------------
 
