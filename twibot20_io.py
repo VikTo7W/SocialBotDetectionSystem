@@ -130,6 +130,7 @@ def validate(accounts_df: pd.DataFrame, edges_df: pd.DataFrame) -> None:
     missing = [c for c in required_cols if c not in accounts_df.columns]
     assert not missing, f"Missing columns: {missing}"
 
+    global _no_neighbor_count
     n = len(accounts_df)
     if len(edges_df) > 0:
         assert int(edges_df["src"].max()) < n, "src index out of bounds"
