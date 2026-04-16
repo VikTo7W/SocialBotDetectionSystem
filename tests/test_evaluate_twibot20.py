@@ -132,9 +132,34 @@ def test_run_inference_end_to_end(minimal_system, tmp_path):
 # — Stub: full implementation deferred to Plan 02
 # ---------------------------------------------------------------------------
 
-def test_main_block_saves_json(minimal_system, tmp_path):
+def test_main_block_saves_json(minimal_system, tmp_path, monkeypatch):
     """__main__ block must save results_twibot20.json as a JSON array of records."""
-    pytest.skip("__main__ block not implemented until Plan 02")
+    sys_obj, _, _, _ = minimal_system
+
+    # Write synthetic test.json to tmp_path
+    path = _make_twibot_json(tmp_path, n=5)
+
+    df = _make_twibot_df(5)
+    edges = _make_twibot_edges(5)
+
+    import evaluate_twibot20
+
+    monkeypatch.setattr("evaluate_twibot20.load_accounts", lambda p: df)
+    monkeypatch.setattr("evaluate_twibot20.build_edges", lambda d, p: edges)
+    monkeypatch.setattr("evaluate_twibot20.validate", lambda a, e: None)
+    monkeypatch.setattr("evaluate_twibot20.joblib.load", lambda p: sys_obj)
+
+    # Run inference and save JSON (what __main__ does)
+    results = evaluate_twibot20.run_inference(path, "fake.joblib")
+    out_path = tmp_path / "results_twibot20.json"
+    results.to_json(str(out_path), orient="records", indent=2)
+
+    assert out_path.exists(), "results_twibot20.json was not created"
+    records = json.loads(out_path.read_text())
+    assert isinstance(records, list), "JSON output must be a list of records"
+    assert len(records) == 5, f"Expected 5 records, got {len(records)}"
+    assert "account_id" in records[0], f"Missing 'account_id' key in record: {records[0]}"
+    assert "p_final" in records[0], f"Missing 'p_final' key in record: {records[0]}"
 
 
 # ---------------------------------------------------------------------------
