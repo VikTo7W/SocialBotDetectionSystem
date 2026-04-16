@@ -1,15 +1,17 @@
 # Phase 9 Verification
 
 **Phase:** 09 - Cascade Integration and Variant Selection  
-**Status:** planned  
+**Status:** passed  
 **Last updated:** 2026-04-16
 
-## Planned checks
+## Checks run
 
 1. `python -m pytest tests/test_calibrate.py -q`
-   - goal: prove deterministic end-to-end Stage 2b variant-selection behavior
+   - result: `16 passed`
+2. `python -m pytest tests/test_evaluate.py -q`
+   - result: `15 passed`
 
-## What execution must prove
+## What execution proved
 
 1. `train_system()` can intentionally select and record the active Stage 2b variant.
 2. `predict_system()` honors the configured Stage 2b branch for both AMR and LSTM paths.
@@ -25,6 +27,6 @@
 - `LSTM-06` targeted
   - deterministic integration tests cover the new training/inference contract
 
-## Exit criteria
+## Verdict
 
-Phase 9 is complete when explicit Stage 2b variant selection works end to end and deterministic integration tests protect the contract.
+Phase 9 achieved its goal and is complete.

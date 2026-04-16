@@ -15,8 +15,8 @@ phase_range: "8-10"
 
 ## Phases
 
-- [ ] **Phase 8: LSTM Stage 2b Foundation** - Define the Stage 2b LSTM data/model contract and get deterministic training behavior working
-- [ ] **Phase 9: Cascade Integration and Variant Selection** - Integrate the LSTM Stage 2b path into the cascade without breaking the AMR baseline
+- [x] **Phase 8: LSTM Stage 2b Foundation** - Define the Stage 2b LSTM data/model contract and get deterministic training behavior working
+- [x] **Phase 9: Cascade Integration and Variant Selection** - Integrate the LSTM Stage 2b path into the cascade without breaking the AMR baseline
 - [ ] **Phase 10: Evaluation and Baseline Comparison** - Compare the LSTM variant against the AMR delta-refiner path and record the outcome
 
 ## Phase Details
@@ -44,8 +44,8 @@ Plans:
   3. Tests or reproducible checks cover the new variant-selection and integration contract
 **Plans**: 2 plans
 Plans:
-- [ ] 09-01-PLAN.md - Explicit Stage 2b selector through shared training state
-- [ ] 09-02-PLAN.md - Inference routing and deterministic integration proof
+- [x] 09-01-PLAN.md - Explicit Stage 2b selector through shared training state
+- [x] 09-02-PLAN.md - Inference routing and deterministic integration proof
 
 ### Phase 10: Evaluation and Baseline Comparison
 **Goal**: The LSTM Stage 2b variant is evaluated against the current AMR Stage 2b baseline and the result is documented honestly
@@ -62,7 +62,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 8. LSTM Stage 2b Foundation | 2/2 | Complete | 2026-04-16 |
-| 9. Cascade Integration and Variant Selection | 0/2 | Planned | - |
+| 9. Cascade Integration and Variant Selection | 2/2 | Complete | 2026-04-16 |
 | 10. Evaluation and Baseline Comparison | 0/? | Not started | - |
 
 ---

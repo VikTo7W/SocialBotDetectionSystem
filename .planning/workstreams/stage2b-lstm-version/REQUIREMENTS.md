@@ -14,9 +14,9 @@
 
 ### Cascade Integration
 
-- [ ] **LSTM-04**: The cascade can run with the LSTM Stage 2b variant enabled without breaking the existing AMR-based baseline path
-- [ ] **LSTM-05**: Configuration or code-path selection makes it clear which Stage 2b variant is active during training and inference
-- [ ] **LSTM-06**: Tests or reproducible checks cover the new LSTM Stage 2b training/inference contract
+- [x] **LSTM-04**: The cascade can run with the LSTM Stage 2b variant enabled without breaking the existing AMR-based baseline path
+- [x] **LSTM-05**: Configuration or code-path selection makes it clear which Stage 2b variant is active during training and inference
+- [x] **LSTM-06**: Tests or reproducible checks cover the new LSTM Stage 2b training/inference contract
 
 ### Evaluation and Comparison
 
@@ -43,9 +43,9 @@
 | LSTM-01 | Phase 8 | Complete |
 | LSTM-02 | Phase 8 | Complete |
 | LSTM-03 | Phase 8 | Complete |
-| LSTM-04 | Phase 9 | Pending |
-| LSTM-05 | Phase 9 | Pending |
-| LSTM-06 | Phase 9 | Pending |
+| LSTM-04 | Phase 9 | Complete |
+| LSTM-05 | Phase 9 | Complete |
+| LSTM-06 | Phase 9 | Complete |
 | LSTM-07 | Phase 10 | Pending |
 | LSTM-08 | Phase 10 | Pending |
 
