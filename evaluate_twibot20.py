@@ -25,6 +25,7 @@ from twibot20_io import load_accounts, build_edges, validate
 from features_stage1 import extract_stage1_matrix as _orig_extract_stage1_matrix
 import botdetector_pipeline as bp
 from botdetector_pipeline import predict_system, TrainedSystem
+from evaluate import evaluate_s3
 
 
 def run_inference(
@@ -95,14 +96,58 @@ def run_inference(
     return results
 
 
+def evaluate_twibot20(
+    path: str = "test.json",
+    model_path: str = "trained_system_v12.joblib",
+    threshold: float = 0.5,
+) -> dict:
+    """Run zero-shot inference on TwiBot-20 and evaluate against ground truth.
+
+    Calls run_inference() then evaluate_s3(). The evaluate_s3() call prints
+    the paper-ready report to stdout (same format as main.py).
+
+    Note: All temporal features are zero for TwiBot-20 accounts (plain-text
+    tweets, no timestamps). This is expected and documented (D-08).
+
+    Args:
+        path: Path to TwiBot-20 test.json.
+        model_path: Path to trained model joblib.
+        threshold: Classification cutoff (default 0.5).
+
+    Returns:
+        dict from evaluate_s3(): {"overall": {...}, "per_stage": {...}, "routing": {...}}
+    """
+    results = run_inference(path, model_path)
+    accounts_df = load_accounts(path)
+    y_true = accounts_df["label"].to_numpy()
+    metrics = evaluate_s3(results, y_true, threshold)
+    return metrics
+
+
 if __name__ == "__main__":
     data_path  = sys.argv[1] if len(sys.argv) > 1 else "test.json"
     model_path = sys.argv[2] if len(sys.argv) > 2 else "trained_system_v12.joblib"
 
+    # Run inference once
     results = run_inference(data_path, model_path)
+
+    # Save inference results (Phase 9 output, preserved)
     out_path = "results_twibot20.json"
     results.to_json(out_path, orient="records", indent=2)
-    print(f"[twibot20] Saved {len(results)} results to {out_path}")
+    print(f"[twibot20] Saved {len(results)} inference results to {out_path}")
+
+    # Evaluate against ground truth (prints paper-ready report via evaluate_s3)
+    accounts_df = load_accounts(data_path)
+    y_true = accounts_df["label"].to_numpy()
+    metrics = evaluate_s3(results, y_true)
+
+    # Save metrics for cross-dataset table (Phase 10 output)
+    metrics_path = "metrics_twibot20.json"
+    with open(metrics_path, "w") as f:
+        json.dump(metrics, f, indent=2)
+    print(f"\n[twibot20] Saved evaluation metrics to {metrics_path}")
+
+    # Summary stats
     bots = int((results["p_final"] >= 0.5).sum())
     print(f"[twibot20] Accounts: {len(results)} | Predicted bots (p_final>=0.5): {bots}")
     print(f"[twibot20] Stage 3 used: {results['stage3_used'].mean():.3f}")
