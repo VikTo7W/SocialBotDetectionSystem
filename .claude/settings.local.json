@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs commit 'docs: research complete for v1.2 TwiBot-20 Cross-Dataset Evaluation' --files .planning/research/)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs commit 'docs: define milestone v1.2 requirements' --files .planning/workstreams/twibot-intergration/REQUIREMENTS.md --cwd c:/Users/dzeni/PycharmProjects/SocialBotDetectionSystem)"
+    ]
+  }
+}

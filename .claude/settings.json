@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs commit 'docs: create milestone v1.2 roadmap \\(3 phases\\)' --files .planning/workstreams/twibot-intergration/ROADMAP.md .planning/workstreams/twibot-intergration/STATE.md .planning/workstreams/twibot-intergration/REQUIREMENTS.md --cwd c:/Users/dzeni/PycharmProjects/SocialBotDetectionSystem)",
+      "Bash(python -c ' *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  }
+}
