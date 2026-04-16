@@ -32,7 +32,7 @@ phase_range: "8-10"
   4. All required columns are present after loading; `label` is int (0 or 1), `node_idx` is int32 and 0-indexed by row
 **Plans:** 2 plans
 Plans:
-- [ ] 08-01-PLAN.md — Test scaffold + load_accounts() implementation (TW-01)
+- [x] 08-01-PLAN.md — Test scaffold + load_accounts() implementation (TW-01)
 - [ ] 08-02-PLAN.md — build_edges() + validate() + integration verification (TW-02, TW-03)
 
 ### Phase 9: Zero-Shot Inference Pipeline
