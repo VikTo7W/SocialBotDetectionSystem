@@ -6,9 +6,16 @@ Provides:
     Uses only synthetic data — does NOT load real BotSim-24 data or sentence-transformers.
 """
 
+import os
+
 import numpy as np
 import pandas as pd
 import pytest
+
+os.environ.setdefault("LOKY_MAX_CPU_COUNT", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
 
 import botdetector_pipeline as bp
 from botdetector_pipeline import (

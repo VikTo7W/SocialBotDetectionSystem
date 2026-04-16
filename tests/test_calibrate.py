@@ -10,8 +10,9 @@ Requirements covered:
     CALIB-03: calibrated thresholds persisted in system.th; reproducible under same seed
 """
 
-import pytest
 import numpy as np
+import pandas as pd
+import pytest
 from botdetector_pipeline import StageThresholds
 
 
@@ -93,3 +94,100 @@ def test_reproducibility(minimal_system):
              th2.n2_trigger, th2.disagreement_trigger, th2.s12_bot, th2.s12_human, th2.novelty_force_stage3)
     for v1, v2 in zip(vals1, vals2):
         assert v1 == v2, f"Reproducibility failed: {v1} != {v2}"
+
+
+def test_calibration_report_contains_trial_diagnostics(minimal_system, capsys):
+    """Phase 8: calibration stores deterministic diagnostics for each completed trial."""
+    calibrate_thresholds = _import_calibrate()
+    system, S2, edges_S2, nodes_total = minimal_system
+
+    calibrate_thresholds(system, S2, edges_S2, nodes_total, metric="f1", n_trials=10, seed=42)
+    report = system.calibration_report_
+
+    assert report["metric"] == "f1"
+    assert report["requested_trials"] == 10
+    assert report["executed_trials"] == len(report["trials"])
+    assert report["best_tie_count"] >= 1
+    assert report["selected_trial_number"] >= 0
+
+    for trial in report["trials"]:
+        assert "primary_score" in trial
+        assert "secondary_log_loss" in trial
+        assert "secondary_brier" in trial
+        assert "positive_predictions" in trial
+        assert "amr_usage_rate" in trial
+        assert "stage3_usage_rate" in trial
+        assert "label_signature" in trial
+        assert "routing_signature" in trial
+
+    output = capsys.readouterr().out
+    assert "best-score ties" in output
+    assert "selected trial" in output
+
+
+def test_secondary_metric_breaks_primary_score_ties(minimal_system, monkeypatch):
+    """Phase 8: tied primary scores should be resolved by a smooth secondary metric."""
+    import calibrate as calibrate_module
+
+    system, S2, edges_S2, nodes_total = minimal_system
+    base_labels = S2["label"].to_numpy(dtype=np.float64)
+    base_probs = np.where(base_labels > 0.5, 0.7, 0.3)
+
+    def tied_predict_system(sys_obj, df, edges_df, nodes_total=None):
+        shift = (
+            sys_obj.th.s1_bot
+            + sys_obj.th.s2a_bot
+            + sys_obj.th.s12_bot
+            + sys_obj.th.novelty_force_stage3
+        )
+        offset = ((shift * 1000.0) % 17.0 - 8.0) * 0.005
+        p_final = np.clip(base_probs + offset, 0.0, 1.0)
+        n = len(df)
+        return pd.DataFrame(
+            {
+                "p_final": p_final,
+                "amr_used": np.zeros(n, dtype=np.int64),
+                "stage3_used": np.zeros(n, dtype=np.int64),
+            }
+        )
+
+    monkeypatch.setattr(calibrate_module, "predict_system", tied_predict_system)
+    calibrate_module.calibrate_thresholds(system, S2, edges_S2, nodes_total, metric="f1", n_trials=12, seed=42)
+    report = system.calibration_report_
+
+    best_trials = [
+        trial
+        for trial in report["trials"]
+        if abs(trial["primary_score"] - report["best_primary_score"]) <= 1e-12
+    ]
+    assert len(best_trials) > 1
+    best_log_loss = min(trial["secondary_log_loss"] for trial in best_trials)
+    selected = next(
+        trial for trial in report["trials"] if trial["trial_number"] == report["selected_trial_number"]
+    )
+    assert selected["secondary_log_loss"] == best_log_loss
+
+
+def test_plateau_guardrail_can_stop_early(minimal_system, monkeypatch):
+    """Phase 8: clearly flat searches should stop early instead of exhausting all trials."""
+    import calibrate as calibrate_module
+
+    system, S2, edges_S2, nodes_total = minimal_system
+
+    def flat_predict_system(sys_obj, df, edges_df, nodes_total=None):
+        n = len(df)
+        return pd.DataFrame(
+            {
+                "p_final": np.full(n, 0.5, dtype=np.float64),
+                "amr_used": np.zeros(n, dtype=np.int64),
+                "stage3_used": np.zeros(n, dtype=np.int64),
+            }
+        )
+
+    monkeypatch.setattr(calibrate_module, "predict_system", flat_predict_system)
+    calibrate_module.calibrate_thresholds(system, S2, edges_S2, nodes_total, metric="f1", n_trials=40, seed=42)
+    report = system.calibration_report_
+
+    assert report["stopped_early"] is True
+    assert report["executed_trials"] < report["requested_trials"]
+    assert report["best_tie_count"] == report["executed_trials"]
