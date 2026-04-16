@@ -33,7 +33,7 @@ phase_range: "8-10"
 **Plans:** 2 plans
 Plans:
 - [x] 08-01-PLAN.md — Test scaffold + load_accounts() implementation (TW-01)
-- [ ] 08-02-PLAN.md — build_edges() + validate() + integration verification (TW-02, TW-03)
+- [x] 08-02-PLAN.md — build_edges() + validate() + integration verification (TW-02, TW-03)
 
 ### Phase 9: Zero-Shot Inference Pipeline
 **Goal**: Users can run zero-shot inference on TwiBot-20 accounts via `evaluate_twibot20.py` with correct Stage 1 ratio clamping
