@@ -17,7 +17,7 @@ phase_range: "8-10"
 
 - [ ] **Phase 8: TwiBot-20 Data Loader** — Load test.json into BotSim-24-compatible DataFrame with edge builder and validation
 - [ ] **Phase 9: Zero-Shot Inference Pipeline** — Run trained_system_v12.joblib on TwiBot-20 accounts with Stage 1 ratio clamping
-- [ ] **Phase 10: Evaluation Metrics and Paper Table** — Produce full evaluation metrics and cross-dataset LaTeX table
+- [x] **Phase 10: Evaluation Metrics and Paper Table** — Produce full evaluation metrics and cross-dataset LaTeX table (completed 2026-04-16)
 
 ## Phase Details
 
@@ -55,10 +55,10 @@ Plans:
   2. Per-stage breakdown is reported: `p1_auc`, `p12_auc`, `p_final_auc`
   3. Routing statistics are reported: `stage3_used` rate and `amr_used` rate across TwiBot-20 accounts
   4. `generate_cross_dataset_table()` in `ablation_tables.py` produces a LaTeX table comparing BotSim-24 S3 (in-distribution, Reddit) vs. TwiBot-20 test (zero-shot, Twitter) side-by-side with dataset context labels; table renders without LaTeX errors
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 10-01-PLAN.md — evaluate_twibot20() function + metrics_twibot20.json output (TW-06)
-- [ ] 10-02-PLAN.md — generate_cross_dataset_table() + Table 5 LaTeX (TW-07)
+- [x] 10-02-PLAN.md — generate_cross_dataset_table() + Table 5 LaTeX (TW-07)
 
 ## Progress Table
 
@@ -66,7 +66,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 8. TwiBot-20 Data Loader | 0/2 | Planned | - |
 | 9. Zero-Shot Inference Pipeline | 0/? | Not started | - |
-| 10. Evaluation Metrics and Paper Table | 1/2 | In Progress|  |
+| 10. Evaluation Metrics and Paper Table | 2/2 | Complete   | 2026-04-16 |
 
 ---
 *Roadmap created: 2026-04-16*
