@@ -7,6 +7,17 @@ A multi-stage cascade classifier for detecting social bots on Reddit using the B
 v1.0 delivered: Bayesian threshold calibration (Optuna TPE), a paper-ready S3 evaluation module, and a REST API for single-account inference.
 v1.1 delivered: Feature leakage removal from Stage 2a, 6 new behavioral/similarity features, full cascade retrain on clean features, and four paper-ready LaTeX ablation tables.
 
+## Current Milestone: v1.2 TwiBot-20 Cross-Dataset Evaluation (workstream: twibot-intergration)
+
+**Goal:** Demonstrate cross-platform robustness of the BotSim-24-trained cascade on TwiBot-20 Twitter data (zero-shot transfer), generating paper-ready metrics for a cross-dataset robustness section.
+
+**Target features:**
+- TwiBot-20 data loader (user.json / edge.csv / label.csv → internal account format)
+- Feature overlap analysis: map TwiBot-20 fields to the 397-dim BotSim-24 feature vector; identify gaps and substitutions
+- Zero-shot inference pipeline: run trained_system_v12.joblib on TwiBot-20 accounts without retraining
+- Paper metrics: F1, AUC, precision/recall + routing statistics on TwiBot-20
+- LaTeX table: cross-dataset results table for the robustness section
+
 ## Core Value
 
 The cascade must produce a single, well-calibrated bot probability per account — routing efficiently through stages while catching sophisticated bots that simple models miss.
