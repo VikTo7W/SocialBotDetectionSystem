@@ -55,7 +55,10 @@ Plans:
   1. The workstream can compare the LSTM variant against the AMR baseline on meaningful evaluation outputs
   2. The result makes clear whether the LSTM path is better, worse, or just behaviorally different
   3. The milestone artifacts preserve the final recommendation and supporting evidence
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 10-01-PLAN.md - Real S3 AMR-vs-LSTM comparison path and evidence artifact
+- [ ] 10-02-PLAN.md - Compact comparison tables and final recommendation record
 
 ## Progress Table
 
@@ -63,7 +66,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 8. LSTM Stage 2b Foundation | 2/2 | Complete | 2026-04-16 |
 | 9. Cascade Integration and Variant Selection | 2/2 | Complete | 2026-04-16 |
-| 10. Evaluation and Baseline Comparison | 0/? | Not started | - |
+| 10. Evaluation and Baseline Comparison | 0/2 | Planned | - |
 
 ---
 *Roadmap created: 2026-04-16*
