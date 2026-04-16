@@ -117,3 +117,114 @@ def test_trailing_whitespace_stripped(tmp_path):
     assert df.iloc[0]["statuses_count"] == 10, (
         f"Expected numeric 10, got {repr(df.iloc[0]['statuses_count'])}"
     )
+
+
+# --- TW-02: Edge construction tests ---
+
+
+def test_edges_schema(tmp_path):
+    records = [
+        _make_record("A", "alice", neighbor={"following": ["B"], "follower": []}),
+        _make_record("B", "bob", neighbor={"following": [], "follower": ["A"]}),
+        _make_record("C", "carol", neighbor=None),
+    ]
+    path = _write_test_json(records, tmp_path)
+    accounts_df = load_accounts(path)
+    edges_df = build_edges(accounts_df, path)
+    assert list(edges_df.columns) == ["src", "dst", "etype", "weight"], (
+        f"Expected ['src','dst','etype','weight'], got {list(edges_df.columns)}"
+    )
+    assert edges_df["src"].dtype == np.int32, f"Expected int32, got {edges_df['src'].dtype}"
+    assert edges_df["dst"].dtype == np.int32, f"Expected int32, got {edges_df['dst'].dtype}"
+    assert edges_df["etype"].dtype == np.int8, f"Expected int8, got {edges_df['etype'].dtype}"
+    assert edges_df["weight"].dtype == np.float32, f"Expected float32, got {edges_df['weight'].dtype}"
+
+
+def test_null_neighbor_no_rows(tmp_path):
+    records = [
+        _make_record("A", "alice", neighbor=None),
+        _make_record("B", "bob", neighbor=None),
+    ]
+    path = _write_test_json(records, tmp_path)
+    accounts_df = load_accounts(path)
+    edges_df = build_edges(accounts_df, path)
+    assert len(edges_df) == 0, f"Expected 0 rows, got {len(edges_df)}"
+    assert list(edges_df.columns) == ["src", "dst", "etype", "weight"], (
+        f"Expected 4 columns even when empty, got {list(edges_df.columns)}"
+    )
+
+
+def test_edges_in_set_only(tmp_path):
+    records = [
+        _make_record("A", "alice", neighbor={"following": ["B", "OUTSIDER"], "follower": []}),
+        _make_record("B", "bob", neighbor={"following": ["OUTSIDER2"], "follower": []}),
+    ]
+    path = _write_test_json(records, tmp_path)
+    accounts_df = load_accounts(path)
+    edges_df = build_edges(accounts_df, path)
+    assert len(edges_df) == 1, f"Expected 1 in-set edge, got {len(edges_df)}"
+    assert edges_df.iloc[0]["src"] == 0, f"Expected src=0 (A), got {edges_df.iloc[0]['src']}"
+    assert edges_df.iloc[0]["dst"] == 1, f"Expected dst=1 (B), got {edges_df.iloc[0]['dst']}"
+    assert edges_df.iloc[0]["etype"] == 0, f"Expected etype=0 (following), got {edges_df.iloc[0]['etype']}"
+
+
+def test_edge_weight(tmp_path):
+    records = [
+        _make_record("A", "alice", neighbor={"following": ["B"], "follower": []}),
+        _make_record("B", "bob", neighbor=None),
+    ]
+    path = _write_test_json(records, tmp_path)
+    accounts_df = load_accounts(path)
+    edges_df = build_edges(accounts_df, path)
+    assert np.allclose(edges_df["weight"].values, np.log1p(1.0)), (
+        f"Expected all weights=log1p(1.0)={np.log1p(1.0)}, got {edges_df['weight'].values}"
+    )
+
+
+def test_edge_direction(tmp_path):
+    records = [
+        _make_record("X", "xuser", neighbor={"following": ["Y"], "follower": ["Y"]}),
+        _make_record("Y", "yuser", neighbor=None),
+    ]
+    path = _write_test_json(records, tmp_path)
+    accounts_df = load_accounts(path)
+    edges_df = build_edges(accounts_df, path)
+    assert len(edges_df) == 2, f"Expected 2 edges, got {len(edges_df)}"
+    following_rows = edges_df[edges_df["etype"] == 0]
+    follower_rows = edges_df[edges_df["etype"] == 1]
+    assert len(following_rows) == 1, "Expected exactly 1 following edge"
+    assert int(following_rows.iloc[0]["src"]) == 0, "Following edge: src should be X (idx=0)"
+    assert int(following_rows.iloc[0]["dst"]) == 1, "Following edge: dst should be Y (idx=1)"
+    assert len(follower_rows) == 1, "Expected exactly 1 follower edge"
+    assert int(follower_rows.iloc[0]["src"]) == 1, "Follower edge: src should be Y (idx=1)"
+    assert int(follower_rows.iloc[0]["dst"]) == 0, "Follower edge: dst should be X (idx=0)"
+
+
+# --- TW-03: Validation tests ---
+
+
+def test_validate_passes(tmp_path):
+    records = [
+        _make_record("A", "alice", neighbor={"following": ["B"], "follower": []}),
+        _make_record("B", "bob", neighbor=None),
+    ]
+    path = _write_test_json(records, tmp_path)
+    accounts_df = load_accounts(path)
+    edges_df = build_edges(accounts_df, path)
+    # Should not raise
+    validate(accounts_df, edges_df)
+
+
+def test_validate_bounds_fail(tmp_path):
+    records = [_make_record("A", "alice", neighbor=None)]
+    path = _write_test_json(records, tmp_path)
+    accounts_df = load_accounts(path)
+    # Manually create bad edges_df with out-of-bounds src index
+    bad_edges = pd.DataFrame({
+        "src": np.array([5], dtype=np.int32),
+        "dst": np.array([0], dtype=np.int32),
+        "etype": np.array([0], dtype=np.int8),
+        "weight": np.array([0.69], dtype=np.float32),
+    })
+    with pytest.raises(AssertionError):
+        validate(accounts_df, bad_edges)
