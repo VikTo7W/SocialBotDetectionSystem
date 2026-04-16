@@ -28,7 +28,11 @@ import pandas as pd
 import pytest
 
 from features_stage2 import extract_stage2_features
-from botdetector_pipeline import extract_amr_embeddings_for_accounts, FeatureConfig
+from botdetector_pipeline import (
+    extract_amr_embeddings_for_accounts,
+    extract_message_embedding_sequences_for_accounts,
+    FeatureConfig,
+)
 
 
 class NormalizedFakeEmbedder:
@@ -131,6 +135,51 @@ def test_amr_zero_for_no_messages():
     result = extract_amr_embeddings_for_accounts(df, cfg, rec)
     assert result.shape[0] == 1
     assert np.allclose(result[0], 0.0), "Zero-message account must yield zero AMR vector"
+
+
+def test_lstm_sequence_zero_for_no_messages():
+    """LSTM sequence helper must return zero-padded output and length 0 for empty histories."""
+    rec = RecordingEmbedder()
+    df = _make_single_account_df(messages=[])
+    cfg = FeatureConfig(stage1_numeric_cols=[], max_messages_per_account=3)
+
+    sequences, lengths = extract_message_embedding_sequences_for_accounts(df, cfg, rec, max_messages=3)
+
+    assert sequences.shape == (1, 3, 384)
+    assert lengths.tolist() == [0]
+    assert np.allclose(sequences[0], 0.0), "Empty-history account must yield all-zero sequence rows"
+
+
+def test_lstm_sequence_preserves_order_and_truncates_to_recent_messages():
+    """LSTM sequence helper must preserve order within the retained recent-message window."""
+    rec = RecordingEmbedder()
+    messages = [
+        {"text": "oldest", "ts": 1.0},
+        {"text": "middle", "ts": 2.0},
+        {"text": "newest", "ts": 3.0},
+    ]
+    df = _make_single_account_df(messages=messages)
+    cfg = FeatureConfig(stage1_numeric_cols=[], max_messages_per_account=2)
+
+    sequences, lengths = extract_message_embedding_sequences_for_accounts(df, cfg, rec, max_messages=2)
+
+    assert sequences.shape == (1, 2, 384)
+    assert lengths.tolist() == [2]
+    assert rec.recorded_texts == ["middle", "newest"], "Sequence truncation must keep the most recent messages in order"
+
+
+def test_lstm_sequence_short_history_uses_trailing_zero_padding():
+    """Short histories must remain shape-stable and use zero padding for unused time steps."""
+    rec = RecordingEmbedder()
+    messages = [{"text": "only one", "ts": 1.0}]
+    df = _make_single_account_df(messages=messages)
+    cfg = FeatureConfig(stage1_numeric_cols=[], max_messages_per_account=3)
+
+    sequences, lengths = extract_message_embedding_sequences_for_accounts(df, cfg, rec, max_messages=3)
+
+    assert lengths.tolist() == [1]
+    assert not np.allclose(sequences[0, 0], 0.0), "The retained message slot should contain an embedding"
+    assert np.allclose(sequences[0, 1:], 0.0), "Unused sequence slots must be zero padded"
 
 
 # ---------------------------------------------------------------------------

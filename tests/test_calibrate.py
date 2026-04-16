@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-from botdetector_pipeline import StageThresholds
+from botdetector_pipeline import StageThresholds, Stage2LSTMRefiner
 
 
 def _import_calibrate():
@@ -227,3 +227,40 @@ def test_plateau_guardrail_can_stop_early(minimal_system, monkeypatch):
     assert report["stopped_early"] is True
     assert report["executed_trials"] < report["requested_trials"]
     assert report["best_tie_count"] == report["executed_trials"]
+
+
+def test_lstm_stage2b_refiner_is_seed_reproducible(minimal_lstm_stage2b_inputs):
+    """Phase 8: LSTM Stage 2b prototype should train deterministically under a fixed seed."""
+    sequences = minimal_lstm_stage2b_inputs["sequences"]
+    lengths = minimal_lstm_stage2b_inputs["lengths"]
+    z_base = minimal_lstm_stage2b_inputs["z_base"]
+    y = minimal_lstm_stage2b_inputs["y"]
+
+    refiner_a = Stage2LSTMRefiner(hidden_dim=12, epochs=15, random_state=42)
+    refiner_b = Stage2LSTMRefiner(hidden_dim=12, epochs=15, random_state=42)
+
+    refiner_a.fit(sequences, lengths, z_base, y)
+    refiner_b.fit(sequences, lengths, z_base, y)
+
+    refined_a = refiner_a.refine(z_base, sequences, lengths)
+    refined_b = refiner_b.refine(z_base, sequences, lengths)
+    assert np.allclose(refined_a, refined_b), "LSTM Stage 2b prototype must be deterministic for the same seed"
+
+
+def test_lstm_stage2b_refiner_preserves_z2_contract_with_zero_history(minimal_lstm_stage2b_inputs):
+    """Phase 8: LSTM Stage 2b prototype must return stable refined logits even with zero-history rows."""
+    sequences = minimal_lstm_stage2b_inputs["sequences"].copy()
+    lengths = minimal_lstm_stage2b_inputs["lengths"].copy()
+    z_base = minimal_lstm_stage2b_inputs["z_base"]
+    y = minimal_lstm_stage2b_inputs["y"]
+
+    refiner = Stage2LSTMRefiner(hidden_dim=12, epochs=15, random_state=42)
+    refiner.fit(sequences, lengths, z_base, y)
+
+    lengths[0] = 0
+    sequences[0] = 0.0
+    refined = refiner.refine(z_base, sequences, lengths)
+
+    assert refined.shape == z_base.shape
+    assert np.isfinite(refined).all()
+    assert refined.dtype == np.float64

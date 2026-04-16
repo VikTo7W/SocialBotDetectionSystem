@@ -13,6 +13,16 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.covariance import LedoitWolf
 from features_stage1 import extract_stage1_matrix
 from features_stage2 import extract_stage2_features
+try:
+    import torch
+    import torch.nn as nn
+    from torch.nn.utils.rnn import pack_padded_sequence
+    HAS_TORCH = True
+except Exception:
+    torch = None
+    nn = None
+    pack_padded_sequence = None
+    HAS_TORCH = False
 
 try:
     import lightgbm as lgb
@@ -157,6 +167,53 @@ def extract_amr_embeddings_for_accounts(
         if is_zero:
             emb[i] = np.zeros(emb.shape[1], dtype=np.float32)
     return emb
+
+
+def extract_message_embedding_sequences_for_accounts(
+    df: pd.DataFrame,
+    cfg: FeatureConfig,
+    embedder: TextEmbedder,
+    max_messages: Optional[int] = None,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Build deterministic per-account embedding sequences for an LSTM Stage 2b path.
+
+    Sequences preserve message order, keep the most recent `max_messages` entries,
+    and pad with trailing zero vectors. Accounts with no messages return a zero
+    sequence and length 0.
+    """
+    max_messages = int(max_messages or (cfg.max_messages_per_account if cfg is not None else 50))
+    max_chars = cfg.max_chars_per_message if cfg is not None else 500
+
+    account_texts: List[List[str]] = []
+    flat_texts: List[str] = []
+
+    for _, row in df.iterrows():
+        messages = row.get("messages") or []
+        selected = list(messages[-max_messages:])
+        texts = [str((msg or {}).get("text") or "")[:max_chars].strip() for msg in selected]
+        account_texts.append(texts)
+        flat_texts.extend(texts)
+
+    if flat_texts:
+        flat_embeddings = embedder.encode(flat_texts).astype(np.float32)
+        embedding_dim = int(flat_embeddings.shape[1])
+    else:
+        embedding_dim = int(embedder.encode([""]).shape[1])
+        flat_embeddings = np.zeros((0, embedding_dim), dtype=np.float32)
+
+    sequences = np.zeros((len(account_texts), max_messages, embedding_dim), dtype=np.float32)
+    lengths = np.zeros(len(account_texts), dtype=np.int64)
+
+    cursor = 0
+    for idx, texts in enumerate(account_texts):
+        lengths[idx] = len(texts)
+        for seq_idx, text in enumerate(texts):
+            if text:
+                sequences[idx, seq_idx] = flat_embeddings[cursor]
+            cursor += 1
+
+    return sequences, lengths
 
 
 # -----------------------------
@@ -310,6 +367,97 @@ class AMRDeltaRefiner:
 
     def refine(self, z_base: np.ndarray, h_amr: np.ndarray) -> np.ndarray:
         return np.asarray(z_base, dtype=np.float64) + self.delta(h_amr)
+
+
+class _Stage2LSTMNet(nn.Module):
+    def __init__(self, input_dim: int, hidden_dim: int):
+        super().__init__()
+        self.lstm = nn.LSTM(input_size=input_dim, hidden_size=hidden_dim, batch_first=True)
+        self.head = nn.Linear(hidden_dim, 1)
+
+    def forward(self, sequences: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
+        batch_size = int(sequences.shape[0])
+        hidden = self.head.in_features
+        state = sequences.new_zeros((batch_size, hidden))
+
+        positive = lengths > 0
+        if positive.any():
+            seq_pos = sequences[positive]
+            len_pos = lengths[positive].to(dtype=torch.int64, device="cpu")
+            packed = pack_padded_sequence(seq_pos, len_pos, batch_first=True, enforce_sorted=False)
+            _, (hidden_state, _) = self.lstm(packed)
+            state[positive] = hidden_state[-1]
+
+        return self.head(state).squeeze(-1)
+
+
+class Stage2LSTMRefiner:
+    """
+    Parallel Stage 2b variant: sequence model over per-message embeddings that
+    learns a delta on top of Stage 2a logits and preserves the refined z2 role.
+    """
+    def __init__(
+        self,
+        hidden_dim: int = 32,
+        lr: float = 1e-2,
+        epochs: int = 60,
+        l2: float = 1e-4,
+        random_state: int = 42,
+    ):
+        self.hidden_dim = hidden_dim
+        self.lr = lr
+        self.epochs = epochs
+        self.l2 = l2
+        self.random_state = random_state
+        self.model: Optional[_Stage2LSTMNet] = None
+
+    def fit(self, sequences: np.ndarray, lengths: np.ndarray, z_base: np.ndarray, y: np.ndarray) -> "Stage2LSTMRefiner":
+        if not HAS_TORCH:
+            raise RuntimeError("Stage2LSTMRefiner requires torch.")
+
+        seq = np.asarray(sequences, dtype=np.float32)
+        len_arr = np.asarray(lengths, dtype=np.int64)
+        z0 = np.asarray(z_base, dtype=np.float32)
+        y_arr = np.asarray(y, dtype=np.float32)
+
+        torch.manual_seed(self.random_state)
+        try:
+            torch.use_deterministic_algorithms(True, warn_only=True)
+        except Exception:
+            pass
+
+        self.model = _Stage2LSTMNet(input_dim=int(seq.shape[2]), hidden_dim=self.hidden_dim)
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=self.l2)
+        loss_fn = nn.BCEWithLogitsLoss()
+
+        seq_tensor = torch.from_numpy(seq)
+        len_tensor = torch.from_numpy(len_arr)
+        z0_tensor = torch.from_numpy(z0)
+        y_tensor = torch.from_numpy(y_arr)
+
+        self.model.train()
+        for _ in range(self.epochs):
+            optimizer.zero_grad()
+            delta = self.model(seq_tensor, len_tensor)
+            loss = loss_fn(z0_tensor + delta, y_tensor)
+            loss.backward()
+            optimizer.step()
+
+        self.model.eval()
+        return self
+
+    def delta(self, sequences: np.ndarray, lengths: np.ndarray) -> np.ndarray:
+        if self.model is None:
+            raise RuntimeError("Stage2LSTMRefiner not fitted.")
+        seq_tensor = torch.from_numpy(np.asarray(sequences, dtype=np.float32))
+        len_tensor = torch.from_numpy(np.asarray(lengths, dtype=np.int64))
+        self.model.eval()
+        with torch.no_grad():
+            delta = self.model(seq_tensor, len_tensor)
+        return delta.detach().cpu().numpy().astype(np.float64)
+
+    def refine(self, z_base: np.ndarray, sequences: np.ndarray, lengths: np.ndarray) -> np.ndarray:
+        return np.asarray(z_base, dtype=np.float64) + self.delta(sequences, lengths)
 
 
 class Stage3StructuralModel:
@@ -511,6 +659,7 @@ class TrainedSystem:
 
     stage3: Stage3StructuralModel
     meta123: LogisticRegression
+    stage2b_lstm: Optional[Stage2LSTMRefiner] = None
 
 
 def train_system(

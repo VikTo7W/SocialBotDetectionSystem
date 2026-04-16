@@ -25,6 +25,7 @@ from botdetector_pipeline import (
     Stage1MetadataModel,
     Stage2BaseContentModel,
     AMRDeltaRefiner,
+    Stage2LSTMRefiner,
     Stage3StructuralModel,
     train_meta12,
     train_meta123,
@@ -36,6 +37,7 @@ from botdetector_pipeline import (
     logit,
     sigmoid,
     entropy_from_p,
+    extract_message_embedding_sequences_for_accounts,
 )
 from features_stage1 import extract_stage1_matrix
 from features_stage2 import extract_stage2_features
@@ -264,3 +266,28 @@ def minimal_system(monkeypatch):
     )
 
     return (system, S2, edges_S2, nodes_total)
+
+
+@pytest.fixture
+def minimal_lstm_stage2b_inputs(minimal_system):
+    """
+    Return deterministic sequence-model inputs for the Stage 2b LSTM prototype.
+    """
+    system, S2, edges_S2, nodes_total = minimal_system
+    cfg = FeatureConfig(stage1_numeric_cols=[], max_messages_per_account=4)
+    sequences, lengths = extract_message_embedding_sequences_for_accounts(S2, cfg, system.embedder, max_messages=4)
+    X2 = extract_stage2_features(S2, system.embedder)
+    z_base = system.stage2a.predict(X2)["z2a"]
+    y = S2["label"].to_numpy(dtype=np.int64)
+    return {
+        "system": system,
+        "S2": S2,
+        "edges_S2": edges_S2,
+        "nodes_total": nodes_total,
+        "cfg": cfg,
+        "sequences": sequences,
+        "lengths": lengths,
+        "z_base": z_base,
+        "y": y,
+        "refiner_class": Stage2LSTMRefiner,
+    }
