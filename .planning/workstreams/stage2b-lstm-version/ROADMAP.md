@@ -42,7 +42,10 @@ Plans:
   1. Training and inference can select the LSTM Stage 2b path without breaking existing cascade behavior
   2. The AMR delta-refiner path remains available as a baseline
   3. Tests or reproducible checks cover the new variant-selection and integration contract
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 09-01-PLAN.md - Explicit Stage 2b selector through shared training state
+- [ ] 09-02-PLAN.md - Inference routing and deterministic integration proof
 
 ### Phase 10: Evaluation and Baseline Comparison
 **Goal**: The LSTM Stage 2b variant is evaluated against the current AMR Stage 2b baseline and the result is documented honestly
@@ -59,7 +62,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 8. LSTM Stage 2b Foundation | 2/2 | Complete | 2026-04-16 |
-| 9. Cascade Integration and Variant Selection | 0/? | Ready | - |
+| 9. Cascade Integration and Variant Selection | 0/2 | Planned | - |
 | 10. Evaluation and Baseline Comparison | 0/? | Not started | - |
 
 ---
