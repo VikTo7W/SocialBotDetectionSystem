@@ -66,7 +66,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 8. TwiBot-20 Data Loader | 0/2 | Planned | - |
 | 9. Zero-Shot Inference Pipeline | 0/? | Not started | - |
-| 10. Evaluation Metrics and Paper Table | 2/2 | Complete   | 2026-04-16 |
+| 10. Evaluation Metrics and Paper Table | 2/2 | Complete    | 2026-04-16 |
 
 ---
 *Roadmap created: 2026-04-16*
