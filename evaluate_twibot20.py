@@ -95,4 +95,16 @@ def run_inference(
     return results
 
 
-# __main__ block implemented in Plan 02
+if __name__ == "__main__":
+    data_path  = sys.argv[1] if len(sys.argv) > 1 else "test.json"
+    model_path = sys.argv[2] if len(sys.argv) > 2 else "trained_system_v12.joblib"
+
+    results = run_inference(data_path, model_path)
+    out_path = "results_twibot20.json"
+    results.to_json(out_path, orient="records", indent=2)
+    print(f"[twibot20] Saved {len(results)} results to {out_path}")
+    bots = int((results["p_final"] >= 0.5).sum())
+    print(f"[twibot20] Accounts: {len(results)} | Predicted bots (p_final>=0.5): {bots}")
+    print(f"[twibot20] Stage 3 used: {results['stage3_used'].mean():.3f}")
+    print(f"[twibot20] AMR used:     {results['amr_used'].mean():.3f}")
+    print(f"[twibot20] p_final mean: {results['p_final'].mean():.4f}")
