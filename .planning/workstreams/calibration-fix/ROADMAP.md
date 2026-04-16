@@ -17,6 +17,8 @@
 2. `calibrate_thresholds()` no longer blindly spends all configured trials on an undifferentiated plateau.
 3. The updated search policy remains reproducible with the existing seed conventions.
 
+**Status:** Complete (2026-04-16)
+
 ### Phase 9: Validation and Selection Evidence
 
 **Goal:** Prove the new calibration behavior is meaningful, not just different, and record the selection policy clearly.
@@ -32,5 +34,5 @@
 
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
-| 8 | Calibration Signal Recovery | CALFIX-01, CALFIX-02, CALFIX-03, CALFIX-04 | Ready |
-| 9 | Validation and Selection Evidence | CALFIX-05, CALFIX-06, CALFIX-07 | Pending |
+| 8 | Calibration Signal Recovery | CALFIX-01, CALFIX-02, CALFIX-03, CALFIX-04 | Complete |
+| 9 | Validation and Selection Evidence | CALFIX-05, CALFIX-06, CALFIX-07 | Ready |

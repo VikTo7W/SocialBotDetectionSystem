@@ -1,34 +1,31 @@
-# Phase 8 - Planning Verification
+# Phase 8 - Execution Verification
 
 **Date:** 2026-04-16
 **Phase:** 08 - Calibration Signal Recovery
-**Status:** Passed (local planning pass)
+**Status:** passed
 
-## Coverage Check
+## Requirements Coverage
 
-- `CALFIX-01` covered by `08-01-PLAN.md`
-- `CALFIX-02` covered by `08-01-PLAN.md`
-- `CALFIX-03` covered by `08-02-PLAN.md`
-- `CALFIX-04` covered by `08-01-PLAN.md`, `08-02-PLAN.md`
+- `CALFIX-01` verified
+  - calibration now records structured per-trial diagnostics that expose why multiple trials can share the same top-line score
+- `CALFIX-02` verified
+  - tie analysis reports whether best-score trials share hard predictions and routing signatures
+- `CALFIX-03` verified
+  - flat long-running searches can stop early via a patience-based plateau guardrail
+- `CALFIX-04` verified
+  - deterministic tie-breaking and seeded reproducibility are covered by tests
 
-## Plan Quality Notes
+## Automated Checks
 
-- Phase 8 planning intentionally skips separate research because this is a local calibration bug with strong code/context already gathered in `08-CONTEXT.md`.
-- The plan is split into two waves so diagnosis lands before behavior changes:
-  - Wave 1 explains the plateau and adds deterministic diagnostics
-  - Wave 2 applies the hybrid fix and regression-proofs it
-- The plan follows the locked discuss-phase decisions:
-  - hybrid fix
-  - secondary-score tie-breaker
-  - diagnosis required, not just patching
-  - broad but calibration-scoped change budget
+- `python -m pytest tests/test_calibrate.py -q`
+  - result: `9 passed`
 
-## Residual Risks
+## Notes
 
-- The exact smooth secondary metric still needs to be chosen during execution.
-- If diagnostics show the plateau is rooted deeper than expected, execution may need small adjacent changes outside `calibrate.py`.
+- A small test-harness support change was required in `tests/conftest.py` so sklearn's histogram-based synthetic fixture runs under the current Windows sandbox without thread-pool permission errors.
+- Phase 8 intentionally stops at calibration signal recovery. Phase 9 remains responsible for broader validation and evidence capture against the real selection behavior.
 
 ## Verdict
 
-Phase 8 is ready to execute.
+Phase 8 achieved its goal and is complete.
 

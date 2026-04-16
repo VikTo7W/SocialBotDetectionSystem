@@ -6,13 +6,13 @@
 
 ## Calibration Diagnosis
 
-- [ ] **CALFIX-01**: Developer can identify and explain why threshold calibration trials repeatedly return the same `F1=0.993333`
-- [ ] **CALFIX-02**: Calibration logs or artifacts make it clear whether objective flatness comes from metric quantization, routing invariance, or another implementation issue
+- [x] **CALFIX-01**: Developer can identify and explain why threshold calibration trials repeatedly return the same `F1=0.993333`
+- [x] **CALFIX-02**: Calibration logs or artifacts make it clear whether objective flatness comes from metric quantization, routing invariance, or another implementation issue
 
 ## Calibration Strategy
 
-- [ ] **CALFIX-03**: `calibrate_thresholds()` uses a strategy that avoids wasting trials on a flat objective plateau
-- [ ] **CALFIX-04**: The chosen strategy preserves reproducibility and has deterministic behavior under a fixed seed
+- [x] **CALFIX-03**: `calibrate_thresholds()` uses a strategy that avoids wasting trials on a flat objective plateau
+- [x] **CALFIX-04**: The chosen strategy preserves reproducibility and has deterministic behavior under a fixed seed
 - [ ] **CALFIX-05**: The calibrated selection rule can distinguish between candidate threshold sets when they have materially different routing or probability behavior
 
 ## Validation
@@ -32,10 +32,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CALFIX-01 | Phase 8 | Planned |
-| CALFIX-02 | Phase 8 | Planned |
-| CALFIX-03 | Phase 8 | Planned |
-| CALFIX-04 | Phase 8 | Planned |
+| CALFIX-01 | Phase 8 | Complete |
+| CALFIX-02 | Phase 8 | Complete |
+| CALFIX-03 | Phase 8 | Complete |
+| CALFIX-04 | Phase 8 | Complete |
 | CALFIX-05 | Phase 9 | Planned |
 | CALFIX-06 | Phase 9 | Planned |
 | CALFIX-07 | Phase 9 | Planned |
