@@ -46,19 +46,19 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TW-01 | TBD | Pending |
-| TW-02 | TBD | Pending |
-| TW-03 | TBD | Pending |
-| TW-04 | TBD | Pending |
-| TW-05 | TBD | Pending |
-| TW-06 | TBD | Pending |
-| TW-07 | TBD | Pending |
+| TW-01 | Phase 8 | Pending |
+| TW-02 | Phase 8 | Pending |
+| TW-03 | Phase 8 | Pending |
+| TW-04 | Phase 9 | Pending |
+| TW-05 | Phase 9 | Pending |
+| TW-06 | Phase 10 | Pending |
+| TW-07 | Phase 10 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 7 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 7 ⚠
+- Mapped to phases: 7 (100%)
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-16*
-*Last updated: 2026-04-16 after initial definition*
+*Last updated: 2026-04-16 after roadmap creation*
