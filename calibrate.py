@@ -5,6 +5,8 @@ Uses Optuna TPESampler for sample-efficient search over 10 continuous threshold 
 from __future__ import annotations
 
 import hashlib
+import json
+from pathlib import Path
 
 import numpy as np
 import optuna
@@ -28,6 +30,17 @@ METRIC_FNS = {
 
 _PRIMARY_TOL = 1e-12
 _SECONDARY_TOL = 1e-12
+
+
+def _json_ready(value):
+    """Recursively coerce numpy-backed values into JSON-serializable Python objects."""
+    if isinstance(value, dict):
+        return {key: _json_ready(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_ready(item) for item in value]
+    if isinstance(value, np.generic):
+        return value.item()
+    return value
 
 
 def _secondary_metrics(y_true: np.ndarray, p_final: np.ndarray) -> tuple[float, float]:
@@ -64,6 +77,116 @@ def _is_better_trial(candidate: dict, incumbent: dict | None) -> bool:
     if incumbent["secondary_brier"] < candidate["secondary_brier"] - _SECONDARY_TOL:
         return False
     return candidate["trial_number"] < incumbent["trial_number"]
+
+
+def build_calibration_report_summary(
+    calibration_report: dict,
+    *,
+    top_k: int = 3,
+) -> dict:
+    """Build a compact winner-versus-alternatives summary from calibration_report_."""
+    trials = list(calibration_report.get("trials", []))
+    if not trials:
+        raise ValueError("calibration_report must include at least one completed trial.")
+
+    selected_trial_number = int(calibration_report["selected_trial_number"])
+    selected = next(
+        trial for trial in trials if int(trial["trial_number"]) == selected_trial_number
+    )
+
+    ranked = sorted(
+        trials,
+        key=lambda trial: (
+            -float(trial["primary_score"]),
+            float(trial["secondary_log_loss"]),
+            float(trial["secondary_brier"]),
+            int(trial["trial_number"]),
+        ),
+    )
+    selected_rank = next(
+        index for index, trial in enumerate(ranked, start=1)
+        if int(trial["trial_number"]) == selected_trial_number
+    )
+
+    summary = {
+        "metric": calibration_report["metric"],
+        "requested_trials": int(calibration_report["requested_trials"]),
+        "executed_trials": int(calibration_report["executed_trials"]),
+        "stopped_early": bool(calibration_report["stopped_early"]),
+        "plateau_patience": int(calibration_report["plateau_patience"]),
+        "selected_trial": {
+            "rank": selected_rank,
+            "trial_number": selected_trial_number,
+            "primary_score": float(selected["primary_score"]),
+            "secondary_log_loss": float(selected["secondary_log_loss"]),
+            "secondary_brier": float(selected["secondary_brier"]),
+            "positive_predictions": int(selected["positive_predictions"]),
+            "amr_usage_rate": float(selected["amr_usage_rate"]),
+            "stage3_usage_rate": float(selected["stage3_usage_rate"]),
+            "thresholds": dict(selected["thresholds"]),
+        },
+        "tie_analysis": {
+            "best_primary_score": float(calibration_report["best_primary_score"]),
+            "best_tie_count": int(calibration_report["best_tie_count"]),
+            "same_hard_predictions": bool(calibration_report["best_tie_same_hard_predictions"]),
+            "same_routing": bool(calibration_report["best_tie_same_routing"]),
+        },
+        "selection_policy": {
+            "strategy": "hybrid",
+            "primary_metric": calibration_report["metric"],
+            "secondary_metrics": ["secondary_log_loss", "secondary_brier"],
+            "plateau_guardrail": "patience-based early stop on no lexicographic improvement",
+        },
+        "alternatives": [],
+    }
+
+    for trial in ranked:
+        if int(trial["trial_number"]) == selected_trial_number:
+            continue
+        summary["alternatives"].append(
+            {
+                "trial_number": int(trial["trial_number"]),
+                "primary_score": float(trial["primary_score"]),
+                "secondary_log_loss": float(trial["secondary_log_loss"]),
+                "secondary_brier": float(trial["secondary_brier"]),
+                "delta_vs_selected": {
+                    "primary_score": float(trial["primary_score"]) - float(selected["primary_score"]),
+                    "secondary_log_loss": float(trial["secondary_log_loss"])
+                    - float(selected["secondary_log_loss"]),
+                    "secondary_brier": float(trial["secondary_brier"])
+                    - float(selected["secondary_brier"]),
+                    "positive_predictions": int(trial["positive_predictions"])
+                    - int(selected["positive_predictions"]),
+                    "amr_usage_rate": float(trial["amr_usage_rate"])
+                    - float(selected["amr_usage_rate"]),
+                    "stage3_usage_rate": float(trial["stage3_usage_rate"])
+                    - float(selected["stage3_usage_rate"]),
+                },
+                "behavior": {
+                    "positive_predictions": int(trial["positive_predictions"]),
+                    "amr_usage_rate": float(trial["amr_usage_rate"]),
+                    "stage3_usage_rate": float(trial["stage3_usage_rate"]),
+                },
+            }
+        )
+        if len(summary["alternatives"]) >= top_k:
+            break
+
+    return summary
+
+
+def write_calibration_report_artifact(
+    calibration_report: dict,
+    output_path: str | Path,
+    *,
+    top_k: int = 3,
+) -> dict:
+    """Write a compact JSON artifact for Phase 9 real-run calibration evidence."""
+    summary = build_calibration_report_summary(calibration_report, top_k=top_k)
+    target = Path(output_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(_json_ready(summary), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return summary
 
 
 def calibrate_thresholds(
@@ -251,6 +374,7 @@ def calibrate_thresholds(
                 "stage3_usage_rate": float(t.user_attrs["stage3_usage_rate"]),
                 "label_signature": t.user_attrs["label_signature"],
                 "routing_signature": t.user_attrs["routing_signature"],
+                "thresholds": dict(t.user_attrs["thresholds"]),
             }
             for t in completed_trials
         ],

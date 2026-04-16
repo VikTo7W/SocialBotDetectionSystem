@@ -10,6 +10,8 @@ Requirements covered:
     CALIB-03: calibrated thresholds persisted in system.th; reproducible under same seed
 """
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -119,10 +121,44 @@ def test_calibration_report_contains_trial_diagnostics(minimal_system, capsys):
         assert "stage3_usage_rate" in trial
         assert "label_signature" in trial
         assert "routing_signature" in trial
+        assert "thresholds" in trial
 
     output = capsys.readouterr().out
     assert "best-score ties" in output
     assert "selected trial" in output
+
+
+def test_report_summary_exposes_selected_and_alternatives(minimal_system):
+    """Phase 9: compact summary should explain the winner against nearby alternatives."""
+    import calibrate as calibrate_module
+
+    system, S2, edges_S2, nodes_total = minimal_system
+    calibrate_module.calibrate_thresholds(system, S2, edges_S2, nodes_total, metric="f1", n_trials=12, seed=42)
+
+    summary = calibrate_module.build_calibration_report_summary(system.calibration_report_, top_k=2)
+    artifact_path = Path(".planning/workstreams/calibration-fix/phases/09-validation-and-selection-evidence/test-calibration-report.json")
+    try:
+        written = calibrate_module.write_calibration_report_artifact(
+            system.calibration_report_,
+            artifact_path,
+            top_k=2,
+        )
+
+        assert summary == written
+        assert artifact_path.exists()
+        assert summary["selection_policy"]["strategy"] == "hybrid"
+        assert summary["selected_trial"]["trial_number"] == system.calibration_report_["selected_trial_number"]
+        assert "thresholds" in summary["selected_trial"]
+        assert len(summary["alternatives"]) <= 2
+        assert summary["alternatives"]
+        for alternative in summary["alternatives"]:
+            assert "delta_vs_selected" in alternative
+            assert "behavior" in alternative
+            assert "positive_predictions" in alternative["behavior"]
+            assert "amr_usage_rate" in alternative["behavior"]
+            assert "stage3_usage_rate" in alternative["behavior"]
+    finally:
+        artifact_path.unlink(missing_ok=True)
 
 
 def test_secondary_metric_breaks_primary_score_ties(minimal_system, monkeypatch):

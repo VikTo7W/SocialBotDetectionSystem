@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -6,8 +8,17 @@ from sklearn.model_selection import train_test_split
 
 from botsim24_io import load_users_csv, load_user_post_comment_json, build_account_table
 from botdetector_pipeline import StageThresholds, train_system, predict_system
-from calibrate import calibrate_thresholds
+from calibrate import calibrate_thresholds, write_calibration_report_artifact
 from evaluate import evaluate_s3
+
+
+def _load_pretrained_system_if_available(path: str = "trained_system.joblib"):
+    artifact = Path(path)
+    if not artifact.exists():
+        return None
+    print(f"[main] Loading pre-trained system from {artifact} for offline calibration/evaluation")
+    return joblib.load(artifact)
+
 
 def filter_edges_for_split(edges_df: pd.DataFrame, node_ids: np.ndarray) -> pd.DataFrame:
     node_set = set(node_ids.tolist())
@@ -16,6 +27,10 @@ def filter_edges_for_split(edges_df: pd.DataFrame, node_ids: np.ndarray) -> pd.D
 
 if __name__ == "__main__":
     SEED = 42
+    phase9_artifact = Path(
+        ".planning/workstreams/calibration-fix/phases/"
+        "09-validation-and-selection-evidence/09-real-run-calibration-report.json"
+    )
 
     # 1) Load BotSim-24
     users = load_users_csv("Users.csv")
@@ -94,16 +109,22 @@ if __name__ == "__main__":
 
     print("Training stage and combiner models")
     # 4) Train the system (Stages trained on S1; meta models trained on S2 with OOF meta12 internally)
-    sys = train_system(
-        S1=S1,
-        S2=S2,
-        edges_S1=edges_S1,
-        edges_S2=edges_S2,
-        cfg=None,  # if your updated train_system no longer needs cfg for stage1 columns
-        th=th,
-        random_state=SEED,
-        nodes_total=len(users),
-    )
+    try:
+        sys = train_system(
+            S1=S1,
+            S2=S2,
+            edges_S1=edges_S1,
+            edges_S2=edges_S2,
+            cfg=None,  # if your updated train_system no longer needs cfg for stage1 columns
+            th=th,
+            random_state=SEED,
+            nodes_total=len(users),
+        )
+    except Exception as exc:
+        sys = _load_pretrained_system_if_available()
+        if sys is None:
+            raise
+        print(f"[main] Training unavailable, reusing existing model artifact: {exc}")
 
     print("Calibrating novelty and confidence thresholds")
     # --- Threshold Calibration on S2 ---
@@ -115,6 +136,14 @@ if __name__ == "__main__":
         metric="f1",
         n_trials=50,
         seed=SEED,
+    )
+    summary = write_calibration_report_artifact(sys.calibration_report_, phase9_artifact)
+    print(f"[main] Wrote calibration evidence artifact to {phase9_artifact}")
+    print(
+        "[main] Calibration winner summary: "
+        f"trial={summary['selected_trial']['trial_number']}, "
+        f"best_ties={summary['tie_analysis']['best_tie_count']}, "
+        f"alternatives={len(summary['alternatives'])}"
     )
     # sys.th is now updated; predict_system() will use calibrated thresholds
 
