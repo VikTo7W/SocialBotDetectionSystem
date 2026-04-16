@@ -19,14 +19,14 @@ See: `.planning/workstreams/calibration-fix/PROJECT.md`
 **Current focus:** Initialize a focused fix for the degenerate threshold search in `calibrate_thresholds()`.
 
 ## Current Position
-**Status:** Ready to discuss
+**Status:** Context gathered
 **Current Phase:** Phase 8 - Calibration Signal Recovery
 **Last Activity:** 2026-04-16
-**Last Activity Description:** Milestone v1.1.1 initialized for calibration search fix
+**Last Activity Description:** Phase 8 context captured for calibration signal recovery
 
 ## Progress
 **Phases Complete:** 0 / 2
-**Current Plan:** Not started
+**Current Plan:** Ready for planning
 
 ## Pending Todos
 
@@ -39,5 +39,5 @@ See: `.planning/workstreams/calibration-fix/PROJECT.md`
 
 ## Session Continuity
 **Last Session:** 2026-04-16
-**Stopped At:** Milestone initialized; next step is Phase 8 discussion/planning
-**Resume File:** None
+**Stopped At:** Phase 8 context gathered
+**Resume File:** .planning/workstreams/calibration-fix/phases/08-calibration-signal-recovery/08-CONTEXT.md
