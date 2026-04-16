@@ -30,7 +30,10 @@ phase_range: "8-10"
   2. Edge builder produces an `edges_df` with schema `{src: int32, dst: int32, etype: int8, weight: float32}` — `following` mapped to etype 0, `follower` to etype 1, all weights `log1p(1.0)`, accounts with `neighbor: None` contribute no rows
   3. Validation asserts `src.max() < len(accounts_df)` and `dst.max() < len(accounts_df)` without error; logs the fraction of accounts with no neighbors (~9%) and no tweets
   4. All required columns are present after loading; `label` is int (0 or 1), `node_idx` is int32 and 0-indexed by row
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 08-01-PLAN.md — Test scaffold + load_accounts() implementation (TW-01)
+- [ ] 08-02-PLAN.md — build_edges() + validate() + integration verification (TW-02, TW-03)
 
 ### Phase 9: Zero-Shot Inference Pipeline
 **Goal**: Users can run zero-shot inference on TwiBot-20 accounts via `evaluate_twibot20.py` with correct Stage 1 ratio clamping
@@ -58,10 +61,10 @@ phase_range: "8-10"
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 8. TwiBot-20 Data Loader | 0/? | Not started | - |
+| 8. TwiBot-20 Data Loader | 0/2 | Planned | - |
 | 9. Zero-Shot Inference Pipeline | 0/? | Not started | - |
 | 10. Evaluation Metrics and Paper Table | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-04-16*
-*Phase range: 8–10 (continues from v1.1 which ended at phase 7)*
+*Phase range: 8-10 (continues from v1.1 which ended at phase 7)*
