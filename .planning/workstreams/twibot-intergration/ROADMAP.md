@@ -55,7 +55,10 @@ Plans:
   2. Per-stage breakdown is reported: `p1_auc`, `p12_auc`, `p_final_auc`
   3. Routing statistics are reported: `stage3_used` rate and `amr_used` rate across TwiBot-20 accounts
   4. `generate_cross_dataset_table()` in `ablation_tables.py` produces a LaTeX table comparing BotSim-24 S3 (in-distribution, Reddit) vs. TwiBot-20 test (zero-shot, Twitter) side-by-side with dataset context labels; table renders without LaTeX errors
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 10-01-PLAN.md — evaluate_twibot20() function + metrics_twibot20.json output (TW-06)
+- [ ] 10-02-PLAN.md — generate_cross_dataset_table() + Table 5 LaTeX (TW-07)
 
 ## Progress Table
 
@@ -63,7 +66,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 8. TwiBot-20 Data Loader | 0/2 | Planned | - |
 | 9. Zero-Shot Inference Pipeline | 0/? | Not started | - |
-| 10. Evaluation Metrics and Paper Table | 0/? | Not started | - |
+| 10. Evaluation Metrics and Paper Table | 0/2 | Planned | - |
 
 ---
 *Roadmap created: 2026-04-16*
