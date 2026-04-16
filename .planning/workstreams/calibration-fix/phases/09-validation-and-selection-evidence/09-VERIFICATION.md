@@ -1,45 +1,48 @@
-# Phase 9 Verification Plan
+# Phase 9 Verification
 
 **Phase:** 09 - Validation and Selection Evidence  
-**Status:** Planned  
+**Status:** passed  
 **Last updated:** 2026-04-16
 
-## What execution must prove
+## Checks run
 
-1. The real S2 calibration path can produce inspectable evidence for why the selected threshold set won.
-2. The evidence compares the selected trial against credible alternatives using both:
-   - score-facing signals such as primary score and smooth secondary metrics
-   - behavior-facing signals such as routing usage, positive prediction patterns, or equivalent real outputs
-3. Trial count is no longer effectively redundant on the real path because calibration either:
-   - differentiates meaningful candidates, or
-   - stops early for a documented plateau reason
-4. The milestone record clearly states whether the final shipped fix is:
-   - early stopping
-   - revised selection logic
-   - a hybrid approach
-
-## Required execution checks
-
-1. `python -m pytest tests/test_calibrate.py -x -q`
+1. `python -m pytest tests/test_calibrate.py -q`
+   - result: `10 passed`
 2. `python main.py`
-3. Inspect the emitted Phase 9 artifact and confirm it includes:
-   - selected trial
-   - selected thresholds
+   - result: completed successfully using the local `trained_system.joblib` fallback because online embedder initialization was blocked in this environment
+3. Reviewed [09-real-run-calibration-report.json](c:/Users/dzeni/PycharmProjects/SocialBotDetectionSystem/.planning/workstreams/calibration-fix/phases/09-validation-and-selection-evidence/09-real-run-calibration-report.json)
+
+## What the real run proved
+
+1. The real S2 calibration path now emits a compact reproducible artifact containing:
+   - selected trial and thresholds
    - primary and secondary scores
    - tie count
    - near-best alternatives
-   - behavior-facing comparison fields
-   - early-stop status and stop reason, if present
+   - routing and prediction behavior deltas
+   - early-stop status
+2. The selected trial was meaningfully distinguishable from alternatives even though F1 tied across all executed trials:
+   - selected trial `3` had the best log loss `0.016382755820816743`
+   - selected trial `3` had the best Brier score `0.0029705427709057768`
+   - alternatives showed materially different routing, including much higher AMR and Stage 3 usage
+3. Trial count was no longer redundant in practice:
+   - `50` trials were requested
+   - only `20` were executed
+   - the search stopped early after a documented plateau with patience `16`
+4. The final shipped policy is explicitly a **hybrid**:
+   - optimize primary F1
+   - break ties with log loss then Brier score
+   - stop early on a stable lexicographic plateau
 
-## Pass conditions
+## Requirement coverage
 
-- `CALFIX-05`: Passes only if the selected trial can be distinguished from alternatives by meaningful score and behavior evidence.
-- `CALFIX-06`: Passes only if tests and the real-run artifact show trial count is not redundant in practice for this calibration path.
-- `CALFIX-07`: Passes only if Phase 9 docs explicitly record the final calibration strategy and justify why it shipped.
+- `CALFIX-05` verified
+  - the selected rule distinguishes between candidate threshold sets using both smooth score and routing behavior
+- `CALFIX-06` verified
+  - tests plus the real-run artifact show that configured trial count is no longer blindly exhausted
+- `CALFIX-07` verified
+  - the phase artifacts explicitly record that the shipped fix is hybrid and explain why
 
-## Failure conditions
+## Verdict
 
-- The real run emits no artifact or only synthetic-style evidence.
-- The artifact cannot explain why the winner beat nearby alternatives.
-- The real path still looks like first-trial-wins behavior disguised by better logging.
-- Requirements are checked off without direct supporting evidence.
+Phase 9 achieved its goal and closes the `calibration-fix` milestone.

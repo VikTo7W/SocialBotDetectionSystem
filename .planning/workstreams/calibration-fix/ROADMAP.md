@@ -2,7 +2,7 @@
 
 ## Milestone
 
-- [ ] **v1.1.1 Threshold Calibration Search Fix** - Phases 8-9
+- [x] **v1.1.1 Threshold Calibration Search Fix** - Phases 8-9 (complete 2026-04-16)
 
 ## Phases
 
@@ -35,4 +35,4 @@
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
 | 8 | Calibration Signal Recovery | CALFIX-01, CALFIX-02, CALFIX-03, CALFIX-04 | Complete |
-| 9 | Validation and Selection Evidence | CALFIX-05, CALFIX-06, CALFIX-07 | Ready |
+| 9 | Validation and Selection Evidence | CALFIX-05, CALFIX-06, CALFIX-07 | Complete |

@@ -13,12 +13,12 @@
 
 - [x] **CALFIX-03**: `calibrate_thresholds()` uses a strategy that avoids wasting trials on a flat objective plateau
 - [x] **CALFIX-04**: The chosen strategy preserves reproducibility and has deterministic behavior under a fixed seed
-- [ ] **CALFIX-05**: The calibrated selection rule can distinguish between candidate threshold sets when they have materially different routing or probability behavior
+- [x] **CALFIX-05**: The calibrated selection rule can distinguish between candidate threshold sets when they have materially different routing or probability behavior
 
 ## Validation
 
-- [ ] **CALFIX-06**: Tests or reproducible checks demonstrate that trial count is no longer effectively redundant for this calibration path
-- [ ] **CALFIX-07**: The milestone records whether the fix uses early stopping, a revised objective, or both, and why that choice was made
+- [x] **CALFIX-06**: Tests or reproducible checks demonstrate that trial count is no longer effectively redundant for this calibration path
+- [x] **CALFIX-07**: The milestone records whether the fix uses early stopping, a revised objective, or both, and why that choice was made
 
 ## Out of Scope
 
@@ -36,6 +36,6 @@
 | CALFIX-02 | Phase 8 | Complete |
 | CALFIX-03 | Phase 8 | Complete |
 | CALFIX-04 | Phase 8 | Complete |
-| CALFIX-05 | Phase 9 | Planned |
-| CALFIX-06 | Phase 9 | Planned |
-| CALFIX-07 | Phase 9 | Planned |
+| CALFIX-05 | Phase 9 | Complete |
+| CALFIX-06 | Phase 9 | Complete |
+| CALFIX-07 | Phase 9 | Complete |
