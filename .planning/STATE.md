@@ -4,37 +4,36 @@ milestone: v1.1
 milestone_name: Feature Leakage Audit & Fix
 status: completed
 stopped_at: Checkpoint at 07-02 Task 2 — ablation_tables.py complete, awaiting user worktree retrain
-last_updated: "2026-04-15T22:57:10.888Z"
-last_activity: "2026-04-15 — 06-01 executed: FEAT-04 cross-message cosine similarity features added at indices 395-396"
+last_updated: "2026-04-16T10:29:44.725Z"
+last_activity: 2026-04-16
 progress:
   total_phases: 3
   completed_phases: 3
   total_plans: 6
   completed_plans: 6
-  percent: 33
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-12)
+See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** The cascade must produce a single, well-calibrated bot probability per account — routing efficiently through stages while catching sophisticated bots that simple models miss.
-**Current focus:** Phase 6 — Ablation Infrastructure and Differentiator Features (ready to execute)
+**Current focus:** Planning next milestone (v1.2)
 
 ## Current Position
 
-Phase: 6 of 7 (Ablation Infrastructure and Differentiator Features) — IN PROGRESS
-Plan: 01 of 02 (06-01 complete; 06-02 retrain pending)
-Status: Phase 6 plan 01 complete — FEAT-04 implemented, 397-dim output; retrain to v12 next
-Last activity: 2026-04-15 — 06-01 executed: FEAT-04 cross-message cosine similarity features added at indices 395-396
+Milestone v1.1 complete — all 3 phases, 6 plans shipped 2026-04-16.
+Next: `/gsd-new-milestone` to plan v1.2.
 
-Progress: [███░░░░░░░] 33%
+Progress: [████████████████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0
 - Average duration: —
 - Total execution time: —
