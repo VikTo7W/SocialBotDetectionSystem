@@ -5,8 +5,8 @@ milestone: v1.1.1
 milestone_name: Threshold Calibration Search Fix
 created: 2026-04-16
 status: ready_to_discuss
-stopped_at: Phase 8 complete; next step is Phase 9 discussion/planning
-last_updated: "2026-04-16T01:15:00Z"
+stopped_at: Phase 9 context gathered; ready for planning
+last_updated: "2026-04-16T01:35:00Z"
 ---
 
 # Project State
@@ -16,17 +16,17 @@ last_updated: "2026-04-16T01:15:00Z"
 See: `.planning/workstreams/calibration-fix/PROJECT.md`
 
 **Core value:** Calibration should produce a meaningful threshold policy, not spend repeated trials rediscovering an identical plateau.
-**Current focus:** Prepare Phase 9 validation work for the new calibration selection behavior.
+**Current focus:** Plan Phase 9 validation work around real-run evidence for the new calibration selection behavior.
 
 ## Current Position
-**Status:** Phase 8 complete
+**Status:** Context gathered
 **Current Phase:** Phase 9 - Validation and Selection Evidence
 **Last Activity:** 2026-04-16
-**Last Activity Description:** Phase 8 executed and verified; calibration diagnostics and hybrid stop/tie-break logic are in place
+**Last Activity Description:** Phase 9 context captured for real-run validation and selection evidence
 
 ## Progress
 **Phases Complete:** 1 / 2
-**Current Plan:** Phase 9 not yet planned
+**Current Plan:** Ready for planning
 
 ## Blockers/Concerns
 
@@ -36,5 +36,5 @@ See: `.planning/workstreams/calibration-fix/PROJECT.md`
 
 ## Session Continuity
 **Last Session:** 2026-04-16
-**Stopped At:** Phase 8 complete; next step is Phase 9 discussion/planning
-**Resume File:** .planning/workstreams/calibration-fix/phases/08-calibration-signal-recovery/08-VERIFICATION.md
+**Stopped At:** Phase 9 context gathered; ready for planning
+**Resume File:** .planning/workstreams/calibration-fix/phases/09-validation-and-selection-evidence/09-CONTEXT.md
