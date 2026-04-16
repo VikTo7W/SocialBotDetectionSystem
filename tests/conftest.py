@@ -291,3 +291,25 @@ def minimal_lstm_stage2b_inputs(minimal_system):
         "y": y,
         "refiner_class": Stage2LSTMRefiner,
     }
+
+
+@pytest.fixture
+def synthetic_training_split():
+    """
+    Deterministic synthetic S1/S2 split for end-to-end train_system tests.
+    """
+    rng = np.random.RandomState(7)
+    nodes_total = 50
+    S1 = _make_synthetic_dataframe(rng)
+    S2 = _make_synthetic_dataframe(rng)
+    edges_S1 = _make_synthetic_edges(rng, n_nodes=nodes_total)
+    edges_S2 = _make_synthetic_edges(rng, n_nodes=nodes_total)
+    return {
+        "S1": S1,
+        "S2": S2,
+        "edges_S1": edges_S1,
+        "edges_S2": edges_S2,
+        "cfg": FeatureConfig(stage1_numeric_cols=[], max_messages_per_account=4),
+        "th": StageThresholds(),
+        "nodes_total": nodes_total,
+    }

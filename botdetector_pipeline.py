@@ -654,12 +654,57 @@ class TrainedSystem:
 
     stage1: Stage1MetadataModel
     stage2a: Stage2BaseContentModel
-    amr_refiner: AMRDeltaRefiner
+    amr_refiner: Optional[AMRDeltaRefiner]
     meta12: LogisticRegression
 
     stage3: Stage3StructuralModel
     meta123: LogisticRegression
     stage2b_lstm: Optional[Stage2LSTMRefiner] = None
+    stage2b_variant: str = "amr"
+
+
+def normalize_stage2b_variant(stage2b_variant: str) -> str:
+    variant = str(stage2b_variant or "amr").strip().lower()
+    if variant not in {"amr", "lstm"}:
+        raise ValueError(f"Unknown stage2b variant: {stage2b_variant!r}")
+    return variant
+
+
+def apply_stage2b_refiner(
+    df: pd.DataFrame,
+    cfg: FeatureConfig,
+    embedder: TextEmbedder,
+    z_base: np.ndarray,
+    route_mask: np.ndarray,
+    stage2b_variant: str,
+    amr_refiner: Optional[AMRDeltaRefiner] = None,
+    stage2b_lstm: Optional[Stage2LSTMRefiner] = None,
+) -> np.ndarray:
+    """
+    Apply the configured Stage 2b branch while keeping the surrounding
+    cascade contract shared across variants.
+    """
+    variant = normalize_stage2b_variant(stage2b_variant)
+    z2 = np.asarray(z_base, dtype=np.float64).copy()
+
+    if not route_mask.any():
+        return z2
+
+    routed_df = df.loc[route_mask]
+    routed_z = z2[route_mask]
+
+    if variant == "amr":
+        if amr_refiner is None:
+            raise RuntimeError("Configured Stage 2b variant 'amr' is unavailable.")
+        h_amr = extract_amr_embeddings_for_accounts(routed_df, cfg, embedder)
+        z2[route_mask] = amr_refiner.refine(routed_z, h_amr)
+        return z2
+
+    if stage2b_lstm is None:
+        raise RuntimeError("Configured Stage 2b variant 'lstm' is unavailable.")
+    sequences, lengths = extract_message_embedding_sequences_for_accounts(routed_df, cfg, embedder)
+    z2[route_mask] = stage2b_lstm.refine(routed_z, sequences, lengths)
+    return z2
 
 
 def train_system(
@@ -671,11 +716,13 @@ def train_system(
     th: StageThresholds,
     random_state: int = 42,
     nodes_total: Optional[int] = None,
+    stage2b_variant: str = "amr",
 ) -> TrainedSystem:
     """
     Train stage models on S1.
     Train meta12/meta123 on S2 using OOF meta12 predictions.
     """
+    stage2b_variant = normalize_stage2b_variant(stage2b_variant)
     embedder = TextEmbedder()
 
     # ---- Stage 1 training on S1
@@ -693,14 +740,21 @@ def train_system(
     out1_S1 = stage1.predict(X1_tr)
     out2a_S1 = stage2a.predict(X2_tr)
 
-    # AMR embeddings for S1
-    H_amr_S1 = extract_amr_embeddings_for_accounts(S1, cfg, embedder)
     z2a_S1 = out2a_S1["z2a"]
 
-    # Train AMR delta refiner with offset z2a
-    print("Train AMR delta refiner with offset z2a")
-    amr_refiner = AMRDeltaRefiner(lr=0.05, epochs=400, l2=1e-3, random_state=random_state)
-    amr_refiner.fit(H_amr_S1, z2a_S1, y1_tr)
+    amr_refiner: Optional[AMRDeltaRefiner] = None
+    stage2b_lstm: Optional[Stage2LSTMRefiner] = None
+
+    if stage2b_variant == "amr":
+        print("Train AMR delta refiner with offset z2a")
+        h_amr_S1 = extract_amr_embeddings_for_accounts(S1, cfg, embedder)
+        amr_refiner = AMRDeltaRefiner(lr=0.05, epochs=400, l2=1e-3, random_state=random_state)
+        amr_refiner.fit(h_amr_S1, z2a_S1, y1_tr)
+    else:
+        print("Train LSTM Stage 2b refiner with offset z2a")
+        sequences_S1, lengths_S1 = extract_message_embedding_sequences_for_accounts(S1, cfg, embedder)
+        stage2b_lstm = Stage2LSTMRefiner(random_state=random_state)
+        stage2b_lstm.fit(sequences_S1, lengths_S1, z2a_S1, y1_tr)
 
     # ---- Stage 3 training on S1
     print("Stage 3 training on S1")
@@ -719,15 +773,17 @@ def train_system(
     # AMR gating based on Stage2a uncertainty/novelty/disagreement
     amr_mask = gate_amr(out2a_S2["p2a"], out2a_S2["n2"], out1_S2["z1"], out2a_S2["z2a"], th)
 
-    # Compute AMR embeddings only for routed accounts
-    H_amr_S2 = np.zeros((len(S2), H_amr_S1.shape[1]), dtype=np.float32)
-    if amr_mask.any():
-        H_amr_S2[amr_mask] = extract_amr_embeddings_for_accounts(S2.loc[amr_mask], cfg, embedder)
-
-    # Refine logits where AMR used
-    z2 = out2a_S2["z2a"].astype(np.float64).copy()
-    if amr_mask.any():
-        z2[amr_mask] = amr_refiner.refine(z2[amr_mask], H_amr_S2[amr_mask])
+    # Refine logits where the configured Stage 2b branch is used
+    z2 = apply_stage2b_refiner(
+        S2,
+        cfg,
+        embedder,
+        out2a_S2["z2a"],
+        amr_mask,
+        stage2b_variant=stage2b_variant,
+        amr_refiner=amr_refiner,
+        stage2b_lstm=stage2b_lstm,
+    )
 
     p2 = sigmoid(z2)
     out2_S2 = {
@@ -776,7 +832,8 @@ def train_system(
     return TrainedSystem(
         cfg=cfg, th=th, embedder=embedder,
         stage1=stage1, stage2a=stage2a, amr_refiner=amr_refiner, meta12=meta12,
-        stage3=stage3, meta123=meta123
+        stage3=stage3, meta123=meta123, stage2b_lstm=stage2b_lstm,
+        stage2b_variant=stage2b_variant,
     )
 
 
@@ -803,15 +860,17 @@ def predict_system(
     # AMR gate
     amr_mask = gate_amr(out2a["p2a"], out2a["n2"], out1["z1"], out2a["z2a"], th)
 
-    # AMR embeddings for gated
-    H_amr = np.zeros((len(df), 384), dtype=np.float32)  # if MiniLM; adjust if needed
-    if amr_mask.any():
-        H_amr[amr_mask] = extract_amr_embeddings_for_accounts(df.loc[amr_mask], cfg, sys.embedder)
-
-    # Refine
-    z2 = out2a["z2a"].astype(np.float64).copy()
-    if amr_mask.any():
-        z2[amr_mask] = sys.amr_refiner.refine(z2[amr_mask], H_amr[amr_mask])
+    # Refine with the configured Stage 2b branch.
+    z2 = apply_stage2b_refiner(
+        df,
+        cfg,
+        sys.embedder,
+        out2a["z2a"],
+        amr_mask,
+        stage2b_variant=sys.stage2b_variant,
+        amr_refiner=sys.amr_refiner,
+        stage2b_lstm=sys.stage2b_lstm,
+    )
     p2 = sigmoid(z2)
     out2 = {
         "z2": z2, "p2": p2, "u2": entropy_from_p(p2), "n2": out2a["n2"]

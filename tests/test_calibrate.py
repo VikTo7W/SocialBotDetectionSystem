@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
+import botdetector_pipeline as bp
 from botdetector_pipeline import StageThresholds, Stage2LSTMRefiner
 
 
@@ -264,3 +265,114 @@ def test_lstm_stage2b_refiner_preserves_z2_contract_with_zero_history(minimal_ls
     assert refined.shape == z_base.shape
     assert np.isfinite(refined).all()
     assert refined.dtype == np.float64
+
+
+def test_train_system_rejects_unknown_stage2b_variant(synthetic_training_split):
+    """Phase 9: training should fail fast on unsupported Stage 2b variants."""
+    with pytest.raises(ValueError, match="Unknown stage2b variant"):
+        bp.train_system(
+            synthetic_training_split["S1"],
+            synthetic_training_split["S2"],
+            synthetic_training_split["edges_S1"],
+            synthetic_training_split["edges_S2"],
+            synthetic_training_split["cfg"],
+            synthetic_training_split["th"],
+            nodes_total=synthetic_training_split["nodes_total"],
+            stage2b_variant="invalid",
+        )
+
+
+def test_train_system_records_requested_lstm_variant(monkeypatch, synthetic_training_split):
+    """Phase 9: training should record the explicit LSTM Stage 2b choice in the system state."""
+
+    class TestEmbedder:
+        def encode(self, texts, batch_size: int = 64) -> np.ndarray:
+            rng = np.random.RandomState(42)
+            return rng.randn(len(texts), 384).astype(np.float32)
+
+    monkeypatch.setattr(bp, "TextEmbedder", lambda *args, **kwargs: TestEmbedder())
+
+    system = bp.train_system(
+        synthetic_training_split["S1"],
+        synthetic_training_split["S2"],
+        synthetic_training_split["edges_S1"],
+        synthetic_training_split["edges_S2"],
+        synthetic_training_split["cfg"],
+        synthetic_training_split["th"],
+        random_state=42,
+        nodes_total=synthetic_training_split["nodes_total"],
+        stage2b_variant="lstm",
+    )
+
+    assert system.stage2b_variant == "lstm"
+    assert system.stage2b_lstm is not None
+    assert system.amr_refiner is None
+
+
+def test_predict_system_uses_amr_branch_when_configured(minimal_system, monkeypatch):
+    """Phase 9: prediction should honor the explicit AMR branch and ignore any LSTM object."""
+    system, S2, edges_S2, nodes_total = minimal_system
+    system.stage2b_variant = "amr"
+
+    class UnexpectedLSTM:
+        def refine(self, z_base, sequences, lengths):
+            raise AssertionError("LSTM branch should not run when stage2b_variant='amr'")
+
+    system.stage2b_lstm = UnexpectedLSTM()
+    calls = {"amr": 0}
+    original_refine = system.amr_refiner.refine
+
+    def tracked_refine(z_base, h_amr):
+        calls["amr"] += 1
+        return original_refine(z_base, h_amr)
+
+    monkeypatch.setattr(system.amr_refiner, "refine", tracked_refine)
+    monkeypatch.setattr(bp, "gate_amr", lambda p2a, n2, z1, z2a, th: np.ones_like(p2a, dtype=bool))
+
+    results = bp.predict_system(system, S2, edges_S2, nodes_total)
+
+    assert calls["amr"] == 1
+    assert results["amr_used"].eq(1).all()
+    assert {"p1", "p2", "p12", "p_final", "stage3_used"}.issubset(results.columns)
+
+
+def test_predict_system_uses_lstm_branch_when_configured(minimal_lstm_stage2b_inputs, monkeypatch):
+    """Phase 9: prediction should honor the explicit LSTM branch and fail closed on AMR fallback."""
+    system = minimal_lstm_stage2b_inputs["system"]
+    system.cfg = minimal_lstm_stage2b_inputs["cfg"]
+    system.stage2b_variant = "lstm"
+
+    refiner = Stage2LSTMRefiner(hidden_dim=12, epochs=15, random_state=42)
+    refiner.fit(
+        minimal_lstm_stage2b_inputs["sequences"],
+        minimal_lstm_stage2b_inputs["lengths"],
+        minimal_lstm_stage2b_inputs["z_base"],
+        minimal_lstm_stage2b_inputs["y"],
+    )
+    system.stage2b_lstm = refiner
+
+    class UnexpectedAMR:
+        def refine(self, z_base, h_amr):
+            raise AssertionError("AMR branch should not run when stage2b_variant='lstm'")
+
+    system.amr_refiner = UnexpectedAMR()
+    calls = {"lstm": 0}
+    original_refine = refiner.refine
+
+    def tracked_refine(z_base, sequences, lengths):
+        calls["lstm"] += 1
+        return original_refine(z_base, sequences, lengths)
+
+    monkeypatch.setattr(refiner, "refine", tracked_refine)
+    monkeypatch.setattr(bp, "gate_amr", lambda p2a, n2, z1, z2a, th: np.ones_like(p2a, dtype=bool))
+
+    results = bp.predict_system(
+        system,
+        minimal_lstm_stage2b_inputs["S2"],
+        minimal_lstm_stage2b_inputs["edges_S2"],
+        minimal_lstm_stage2b_inputs["nodes_total"],
+    )
+
+    assert calls["lstm"] == 1
+    assert results["amr_used"].eq(1).all()
+    assert {"p1", "p2", "p12", "p_final", "stage3_used"}.issubset(results.columns)
