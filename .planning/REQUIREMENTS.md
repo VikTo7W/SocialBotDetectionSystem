@@ -38,11 +38,11 @@
 
 | REQ-ID | Phase | Plan |
 |--------|-------|------|
-| FEAT-01 | — | — |
-| FEAT-02 | — | — |
-| FEAT-03 | — | — |
-| CAL-01 | — | — |
-| CAL-02 | — | — |
-| CAL-03 | — | — |
-| EVAL-01 | — | — |
-| EVAL-02 | — | — |
+| FEAT-01 | Phase 8 | — |
+| FEAT-02 | Phase 8 | — |
+| FEAT-03 | Phase 8 | — |
+| CAL-01 | Phase 9 | — |
+| CAL-02 | Phase 9 | — |
+| CAL-03 | Phase 9 | — |
+| EVAL-01 | Phase 10 | — |
+| EVAL-02 | Phase 10 | — |
