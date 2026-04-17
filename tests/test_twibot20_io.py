@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from twibot20_io import load_accounts, build_edges, validate
+from twibot20_io import load_accounts, build_edges, validate, parse_tweet_types
 
 
 def _write_test_json(records: list, tmp_path) -> str:
@@ -228,3 +228,104 @@ def test_validate_bounds_fail(tmp_path):
     })
     with pytest.raises(AssertionError):
         validate(accounts_df, bad_edges)
+
+
+# --- FEAT-01: parse_tweet_types() unit tests ---
+
+
+def _msgs(*texts):
+    """Helper: build messages list from plain text strings."""
+    return [{"text": t, "ts": None, "kind": "tweet"} for t in texts]
+
+
+def test_parse_tweet_types_rt_counted():
+    """RT-prefixed tweets are counted as retweets."""
+    result = parse_tweet_types(_msgs("RT @alice: some tweet", "hello"))
+    assert result["rt_count"] == 1, f"Expected rt_count=1, got {result['rt_count']}"
+    assert result["original_count"] == 1, f"Expected original_count=1, got {result['original_count']}"
+    assert result["mt_count"] == 0, f"Expected mt_count=0, got {result['mt_count']}"
+
+
+def test_parse_tweet_types_mt_counted():
+    """MT-prefixed tweets are counted as modified tweets."""
+    result = parse_tweet_types(_msgs("MT @bob: modified tweet", "original"))
+    assert result["mt_count"] == 1, f"Expected mt_count=1, got {result['mt_count']}"
+    assert result["original_count"] == 1, f"Expected original_count=1, got {result['original_count']}"
+    assert result["rt_count"] == 0, f"Expected rt_count=0, got {result['rt_count']}"
+
+
+def test_parse_tweet_types_original_counted():
+    """Non-RT/MT tweets are counted as original."""
+    result = parse_tweet_types(_msgs("Just a regular tweet", "Another tweet"))
+    assert result["original_count"] == 2, f"Expected original_count=2, got {result['original_count']}"
+    assert result["rt_count"] == 0
+    assert result["mt_count"] == 0
+
+
+def test_parse_tweet_types_case_insensitive():
+    """rt and Rt prefixes are treated the same as RT (D-03)."""
+    result = parse_tweet_types(_msgs(
+        "rt @user1: lowercase rt",
+        "Rt @user2: mixed case rt",
+        "RT @user3: uppercase rt",
+    ))
+    assert result["rt_count"] == 3, f"Expected rt_count=3, got {result['rt_count']}"
+
+
+def test_parse_tweet_types_username_extracted():
+    """@handle is extracted from RT tweet and stripped of trailing colon."""
+    result = parse_tweet_types(_msgs("RT @alice: tweet text"))
+    assert "alice" in result["rt_mt_usernames"], (
+        f"Expected 'alice' in rt_mt_usernames, got {result['rt_mt_usernames']}"
+    )
+
+
+def test_parse_tweet_types_no_at_token_skipped():
+    """RT tweet with no @-prefixed token after RT is counted but no username extracted."""
+    result = parse_tweet_types(_msgs("RT some tweet without handle"))
+    assert result["rt_count"] == 1, f"Expected rt_count=1, got {result['rt_count']}"
+    assert result["rt_mt_usernames"] == [], (
+        f"Expected empty rt_mt_usernames, got {result['rt_mt_usernames']}"
+    )
+
+
+def test_parse_tweet_types_deduplication():
+    """Same @handle from two RT tweets appears exactly once in rt_mt_usernames."""
+    result = parse_tweet_types(_msgs(
+        "RT @alice: first tweet",
+        "RT @alice: second tweet",
+        "RT @bob: another tweet",
+    ))
+    assert result["rt_mt_usernames"].count("alice") == 1, (
+        f"Expected 'alice' once, got {result['rt_mt_usernames']}"
+    )
+    assert "bob" in result["rt_mt_usernames"], (
+        f"Expected 'bob' in rt_mt_usernames, got {result['rt_mt_usernames']}"
+    )
+    assert len(result["rt_mt_usernames"]) == 2, (
+        f"Expected 2 distinct usernames, got {result['rt_mt_usernames']}"
+    )
+
+
+def test_parse_tweet_types_empty_messages():
+    """Empty messages list returns all-zero counts and empty username list (D-11)."""
+    result = parse_tweet_types([])
+    assert result == {
+        "rt_count": 0,
+        "mt_count": 0,
+        "original_count": 0,
+        "rt_mt_usernames": [],
+    }, f"Expected all zeros for empty messages, got {result}"
+
+
+def test_parse_tweet_types_preserves_insertion_order():
+    """rt_mt_usernames preserves first-seen order (not alphabetical or set-order)."""
+    result = parse_tweet_types(_msgs(
+        "RT @charlie: tweet",
+        "RT @alpha: tweet",
+        "MT @bravo: tweet",
+        "RT @charlie: duplicate",
+    ))
+    assert result["rt_mt_usernames"] == ["charlie", "alpha", "bravo"], (
+        f"Expected order [charlie, alpha, bravo], got {result['rt_mt_usernames']}"
+    )

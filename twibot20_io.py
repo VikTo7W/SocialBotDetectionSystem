@@ -142,3 +142,59 @@ def validate(accounts_df: pd.DataFrame, edges_df: pd.DataFrame) -> None:
     print(f"[twibot20] accounts: {n}, edges: {len(edges_df)}")
     print(f"[twibot20] no-neighbor fraction: {no_neighbor_frac:.3f}")
     print(f"[twibot20] no-tweet fraction: {no_tweet_frac:.3f}")
+
+
+def parse_tweet_types(messages: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Classify an account's tweets into RT, MT, and original buckets.
+
+    Classifies each tweet by a case-insensitive prefix check (D-01, D-03):
+    - "RT ..." -> retweet
+    - "MT ..." -> modified tweet
+    - anything else -> original tweet
+
+    Extracts the first space-delimited token starting with "@" from RT/MT tweets
+    as the retweeted/quoted account handle (D-02). Deduplicates handles while
+    preserving insertion order.
+
+    Args:
+        messages: List of {"text": str, "ts": None, "kind": "tweet"} dicts
+            as returned by load_accounts().
+
+    Returns:
+        Dict with keys:
+            rt_count (int): number of retweets.
+            mt_count (int): number of modified tweets.
+            original_count (int): number of original tweets.
+            rt_mt_usernames (list[str]): distinct lowercase @-handles (without
+                the "@" prefix) extracted from RT/MT tweets, in order of first
+                appearance.
+    """
+    rt_count = 0
+    mt_count = 0
+    original_count = 0
+    rt_mt_usernames: List[str] = []
+
+    for msg in messages:
+        text = msg["text"].strip()
+        upper = text.upper()
+        if upper.startswith("RT "):
+            rt_count += 1
+            tokens = text.split()
+            # tokens[0] is "RT"; tokens[1] should be "@handle" or "@handle:"
+            if len(tokens) > 1 and tokens[1].startswith("@"):
+                rt_mt_usernames.append(tokens[1].lstrip("@").rstrip(":").lower())
+        elif upper.startswith("MT "):
+            mt_count += 1
+            tokens = text.split()
+            if len(tokens) > 1 and tokens[1].startswith("@"):
+                rt_mt_usernames.append(tokens[1].lstrip("@").rstrip(":").lower())
+        else:
+            original_count += 1
+
+    return {
+        "rt_count": rt_count,
+        "mt_count": mt_count,
+        "original_count": original_count,
+        # dict.fromkeys deduplicates while preserving insertion order (Python 3.7+)
+        "rt_mt_usernames": list(dict.fromkeys(rt_mt_usernames)),
+    }
