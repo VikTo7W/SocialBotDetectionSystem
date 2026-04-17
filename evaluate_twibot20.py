@@ -23,9 +23,11 @@ from evaluate import evaluate_s3
 from features_stage1 import extract_stage1_matrix as _orig_extract_stage1_matrix
 from twibot20_io import _detect_encoding, build_edges, load_accounts, parse_tweet_types, validate
 
+# FEAT-03 review (Phase 8): _RATIO_CAP retained at 1000.0.
 # TwiBot-20 tweet counts are bounded by the Twitter 3200-tweet API limit.
-# Ratio columns (post_c1/c2/ct/sr, indices 6-9) can still blow up for accounts
-# with near-zero denominators. Empirically, 1000.0 remains a conservative cap.
+# Ratio columns (post_c1/c2/ct/sr, indices 6-9) can blow up for accounts
+# with near-zero denominators. Empirical 95p/99p are printed at adapter time
+# (see run_inference logging). 1000.0 remains a conservative cap.
 _RATIO_CAP = 1000.0
 
 
