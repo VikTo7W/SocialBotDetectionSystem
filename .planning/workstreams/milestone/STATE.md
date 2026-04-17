@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Feature Leakage Audit & Fix
-status: completed
-stopped_at: Checkpoint at 07-02 Task 2 — ablation_tables.py complete, awaiting user worktree retrain
-last_updated: "2026-04-16T10:29:44.725Z"
-last_activity: 2026-04-16
+milestone: v1.2
+milestone_name: TwiBot-20 Cross-Domain Transfer
+status: planning
+stopped_at: ""
+last_updated: "2026-04-17T00:00:00.000Z"
+last_activity: 2026-04-17
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,8 +25,10 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 ## Current Position
 
-Milestone v1.1 complete — all 3 phases, 6 plans shipped 2026-04-16.
-Next: `/gsd-new-milestone` to plan v1.2.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-17 — Milestone v1.2 started
 
 Progress: [████████████████████] 100%
 

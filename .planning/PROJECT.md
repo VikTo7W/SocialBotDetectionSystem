@@ -7,16 +7,16 @@ A multi-stage cascade classifier for detecting social bots on Reddit using the B
 v1.0 delivered: Bayesian threshold calibration (Optuna TPE), a paper-ready S3 evaluation module, and a REST API for single-account inference.
 v1.1 delivered: Feature leakage removal from Stage 2a, 6 new behavioral/similarity features, full cascade retrain on clean features, and four paper-ready LaTeX ablation tables.
 
-## Current Milestone: v1.2 TwiBot-20 Cross-Dataset Evaluation (workstream: twibot-intergration)
+## Current Milestone: v1.2 TwiBot-20 Cross-Domain Transfer
 
-**Goal:** Demonstrate cross-platform robustness of the BotSim-24-trained cascade on TwiBot-20 Twitter data (zero-shot transfer), generating paper-ready metrics for a cross-dataset robustness section.
+**Goal:** Achieve meaningful zero-shot transfer performance on TwiBot-20 by replacing Reddit-specific Stage 1 features with behaviorally-grounded Twitter equivalents (RT/MT/original tweet counts + engagement breadth), and introducing a sliding-window online threshold calibrator that adjusts routing thresholds unsupervised as accounts are processed.
 
 **Target features:**
-- TwiBot-20 data loader (user.json / edge.csv / label.csv → internal account format)
-- Feature overlap analysis: map TwiBot-20 fields to the 397-dim BotSim-24 feature vector; identify gaps and substitutions
-- Zero-shot inference pipeline: run trained_system_v12.joblib on TwiBot-20 accounts without retraining
-- Paper metrics: F1, AUC, precision/recall + routing statistics on TwiBot-20
-- LaTeX table: cross-dataset results table for the robustness section
+- Behavioral tweet parser: classify each account's tweets into RT / MT / original; extract distinct @usernames from RT/MT tweets
+- Stage 1 feature adapter: submission_num ← original tweets, comment_num_1 ← RT count, comment_num_2 ← MT count, subreddit_list ← distinct @usernames in RT/MT tweets
+- Sliding-window online threshold recalibration: update routing thresholds every N accounts from running novelty score buffer (unsupervised)
+- Paper metrics: F1, AUC, precision/recall on TwiBot-20 before/after behavioral adapter
+- LaTeX cross-dataset table for the paper robustness section
 
 ## Core Value
 
