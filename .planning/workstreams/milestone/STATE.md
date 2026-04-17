@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: TwiBot-20 Cross-Domain Transfer
 status: in_progress
-stopped_at: "Phase 8 complete — behavioral tweet parser and transfer adapter stabilized; ready for Phase 9 sliding-window recalibration"
-last_updated: "2026-04-17T12:00:00.000Z"
+stopped_at: "Phase 9 context gathered — sliding-window online threshold recalibration; ready for planning"
+last_updated: "2026-04-17T21:30:00.000Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 3
