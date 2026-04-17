@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 import joblib
 import numpy as np
@@ -7,9 +8,34 @@ import torch
 from sklearn.model_selection import train_test_split
 
 from botsim24_io import load_users_csv, load_user_post_comment_json, build_account_table
-from botdetector_pipeline import StageThresholds, train_system, predict_system
+from botdetector_pipeline import (
+    Stage2LSTMRefiner,
+    StageThresholds,
+    TrainedSystem,
+    apply_stage2b_refiner,
+    build_graph_features_nodeidx,
+    build_meta12_table,
+    entropy_from_p,
+    extract_message_embedding_sequences_for_accounts,
+    gate_amr,
+    gate_stage3,
+    logit,
+    oof_meta12_predictions,
+    predict_system,
+    sigmoid,
+    train_meta12,
+    train_meta123,
+    train_system,
+)
 from calibrate import calibrate_thresholds, write_calibration_report_artifact
 from evaluate import compare_stage2b_variants, evaluate_s3, write_stage2b_comparison_artifact
+from features_stage1 import extract_stage1_matrix
+from features_stage2 import extract_stage2_features
+
+os.environ.setdefault("LOKY_MAX_CPU_COUNT", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
 
 
 def _load_pretrained_system_if_available(path: str = "trained_system.joblib"):
@@ -61,6 +87,17 @@ def _train_or_load_variant_system(
             embedder=None if seed_system is None else seed_system.embedder,
         )
     except Exception as exc:
+        if stage2b_variant == "lstm" and seed_system is not None:
+            print(f"[main] Full-cascade retrain unavailable for lstm, deriving variant from local baseline: {exc}")
+            return _build_lstm_variant_from_seed_system(
+                seed_system=seed_system,
+                S1=S1,
+                S2=S2,
+                edges_S2=edges_S2,
+                th=th,
+                random_state=random_state,
+                nodes_total=nodes_total,
+            )
         fallback_paths = [model_path]
         if stage2b_variant == "amr":
             fallback_paths.extend(["trained_system.joblib", "trained_system_v12.joblib"])
@@ -71,6 +108,96 @@ def _train_or_load_variant_system(
     return sys
 
 
+def _build_lstm_variant_from_seed_system(
+    *,
+    seed_system,
+    S1: pd.DataFrame,
+    S2: pd.DataFrame,
+    edges_S2: pd.DataFrame,
+    th: StageThresholds,
+    random_state: int,
+    nodes_total: int,
+) -> TrainedSystem:
+    cfg = getattr(seed_system, "cfg", None)
+    embedder = seed_system.embedder
+
+    y1_tr = S1["label"].to_numpy(dtype=np.int64)
+    X1_tr = extract_stage1_matrix(S1)
+    X2_tr = extract_stage2_features(S1, embedder)
+    out2a_S1 = seed_system.stage2a.predict(X2_tr)
+    sequences_S1, lengths_S1 = extract_message_embedding_sequences_for_accounts(S1, cfg, embedder)
+
+    stage2b_lstm = Stage2LSTMRefiner(random_state=random_state)
+    stage2b_lstm.fit(sequences_S1, lengths_S1, out2a_S1["z2a"], y1_tr)
+
+    y2 = S2["label"].to_numpy(dtype=np.int64)
+    X1_S2 = extract_stage1_matrix(S2)
+    out1_S2 = seed_system.stage1.predict(X1_S2)
+    X2_S2 = extract_stage2_features(S2, embedder)
+    out2a_S2 = seed_system.stage2a.predict(X2_S2)
+
+    stage2b_mask = gate_amr(out2a_S2["p2a"], out2a_S2["n2"], out1_S2["z1"], out2a_S2["z2a"], th)
+    z2 = apply_stage2b_refiner(
+        S2,
+        cfg,
+        embedder,
+        out2a_S2["z2a"],
+        stage2b_mask,
+        stage2b_variant="lstm",
+        stage2b_lstm=stage2b_lstm,
+    )
+    p2 = sigmoid(z2)
+    out2_S2 = {
+        "z2": z2,
+        "p2": p2,
+        "u2": entropy_from_p(p2),
+        "n2": out2a_S2["n2"],
+    }
+
+    X_meta12_S2 = build_meta12_table(out1_S2, out2_S2, amr_used=stage2b_mask.astype(np.float32))
+    p12_oof = oof_meta12_predictions(X_meta12_S2, y2, n_splits=5, random_state=random_state)
+    meta12 = train_meta12(X_meta12_S2, y2)
+
+    stage3_mask = gate_stage3(p12_oof, out1_S2["n1"], out2_S2["n2"], th)
+    X3_S2 = build_graph_features_nodeidx(S2, edges_S2, nodes_total)
+    out3_S2 = {
+        "p3": np.full(len(S2), 0.5, dtype=np.float64),
+        "z3": np.zeros(len(S2), dtype=np.float64),
+        "n3": np.zeros(len(S2), dtype=np.float64),
+    }
+    if stage3_mask.any():
+        pred3 = seed_system.stage3.predict(X3_S2[stage3_mask])
+        out3_S2["p3"][stage3_mask] = pred3["p3"]
+        out3_S2["z3"][stage3_mask] = pred3["z3"]
+        out3_S2["n3"][stage3_mask] = pred3["n3"]
+
+    X_meta123_S2 = pd.DataFrame(
+        {
+            "z12": logit(p12_oof),
+            "z3": out3_S2["z3"],
+            "stage3_used": stage3_mask.astype(np.float32),
+            "n1": out1_S2["n1"],
+            "n2": out2_S2["n2"],
+            "n3": out3_S2["n3"],
+        }
+    )
+    meta123 = train_meta123(X_meta123_S2, y2)
+
+    return TrainedSystem(
+        cfg=cfg,
+        th=th,
+        embedder=embedder,
+        stage1=seed_system.stage1,
+        stage2a=seed_system.stage2a,
+        amr_refiner=seed_system.amr_refiner,
+        meta12=meta12,
+        stage3=seed_system.stage3,
+        meta123=meta123,
+        stage2b_lstm=stage2b_lstm,
+        stage2b_variant="lstm",
+    )
+
+
 def filter_edges_for_split(edges_df: pd.DataFrame, node_ids: np.ndarray) -> pd.DataFrame:
     node_set = set(node_ids.tolist())
     m = edges_df["src"].isin(node_set) & edges_df["dst"].isin(node_set)
@@ -78,6 +205,7 @@ def filter_edges_for_split(edges_df: pd.DataFrame, node_ids: np.ndarray) -> pd.D
 
 if __name__ == "__main__":
     SEED = 42
+    COMPARISON_CALIBRATION_TRIALS = 8
     phase9_artifact = Path(
         ".planning/workstreams/calibration-fix/phases/"
         "09-validation-and-selection-evidence/09-real-run-calibration-report.json"
@@ -197,7 +325,7 @@ if __name__ == "__main__":
             edges_S2=edges_S2,
             nodes_total=len(accounts),
             metric="f1",
-            n_trials=50,
+            n_trials=COMPARISON_CALIBRATION_TRIALS,
             seed=SEED,
         )
 
