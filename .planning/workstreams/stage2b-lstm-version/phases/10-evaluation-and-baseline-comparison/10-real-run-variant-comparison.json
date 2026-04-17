@@ -1,0 +1,109 @@
+{
+  "overall_deltas": {
+    "auc": 0.00046457607433214587,
+    "f1": 0.01654440455751527,
+    "precision": 0.026490066225165587,
+    "recall": 0.00666666666666671
+  },
+  "policy": {
+    "auc_margin": 0.01,
+    "baseline_variant": "amr",
+    "challenger_variant": "lstm",
+    "evaluation_rule": "metric_plus_routing",
+    "metric_margin": 0.01,
+    "primary_metric": "f1"
+  },
+  "recommendation": {
+    "rationale": "lstm exceeds amr on f1 by 0.0165, which clears the recommendation margin.",
+    "recommended_variant": "lstm",
+    "status": "challenger_better"
+  },
+  "routing_deltas": {
+    "pct_amr_triggered": 41.18993135011441,
+    "pct_stage1_exit": -39.588100686498855,
+    "pct_stage2_exit": 29.519450800915322,
+    "pct_stage3_exit": 10.068649885583525
+  },
+  "variants": {
+    "amr": {
+      "overall": {
+        "auc": 0.9991869918699187,
+        "f1": 0.9767441860465116,
+        "precision": 0.9735099337748344,
+        "recall": 0.98
+      },
+      "per_stage": {
+        "p1": {
+          "auc": 0.8509756097560975,
+          "f1": 0.6204379562043796,
+          "precision": 0.6854838709677419,
+          "recall": 0.5666666666666667
+        },
+        "p12": {
+          "auc": 0.9991869918699187,
+          "f1": 0.9735099337748344,
+          "precision": 0.9671052631578947,
+          "recall": 0.98
+        },
+        "p2": {
+          "auc": 0.9986759581881532,
+          "f1": 0.9767441860465116,
+          "precision": 0.9735099337748344,
+          "recall": 0.98
+        },
+        "p_final": {
+          "auc": 0.9991869918699187,
+          "f1": 0.9767441860465116,
+          "precision": 0.9735099337748344,
+          "recall": 0.98
+        }
+      },
+      "routing": {
+        "pct_amr_triggered": 50.11441647597254,
+        "pct_stage1_exit": 46.681922196796336,
+        "pct_stage2_exit": 42.10526315789474,
+        "pct_stage3_exit": 11.212814645308924
+      }
+    },
+    "lstm": {
+      "overall": {
+        "auc": 0.9996515679442508,
+        "f1": 0.9932885906040269,
+        "precision": 1.0,
+        "recall": 0.9866666666666667
+      },
+      "per_stage": {
+        "p1": {
+          "auc": 0.8509756097560975,
+          "f1": 0.6204379562043796,
+          "precision": 0.6854838709677419,
+          "recall": 0.5666666666666667
+        },
+        "p12": {
+          "auc": 0.9996515679442508,
+          "f1": 0.9866666666666667,
+          "precision": 0.9866666666666667,
+          "recall": 0.9866666666666667
+        },
+        "p2": {
+          "auc": 0.9994425087108013,
+          "f1": 0.9798657718120806,
+          "precision": 0.9864864864864865,
+          "recall": 0.9733333333333334
+        },
+        "p_final": {
+          "auc": 0.9996515679442508,
+          "f1": 0.9932885906040269,
+          "precision": 1.0,
+          "recall": 0.9866666666666667
+        }
+      },
+      "routing": {
+        "pct_amr_triggered": 91.30434782608695,
+        "pct_stage1_exit": 7.093821510297483,
+        "pct_stage2_exit": 71.62471395881006,
+        "pct_stage3_exit": 21.28146453089245
+      }
+    }
+  }
+}

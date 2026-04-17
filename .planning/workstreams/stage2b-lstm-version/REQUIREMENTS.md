@@ -20,8 +20,8 @@
 
 ### Evaluation and Comparison
 
-- [ ] **LSTM-07**: Developer can compare the LSTM Stage 2b variant against the current AMR delta-refiner baseline on meaningful metrics or routing behavior
-- [ ] **LSTM-08**: Workstream artifacts record whether the LSTM variant is better, worse, or merely different, and on what evidence
+- [x] **LSTM-07**: Developer can compare the LSTM Stage 2b variant against the current AMR delta-refiner baseline on meaningful metrics or routing behavior
+- [x] **LSTM-08**: Workstream artifacts record whether the LSTM variant is better, worse, or merely different, and on what evidence
 
 ## Future Requirements
 
@@ -46,8 +46,8 @@
 | LSTM-04 | Phase 9 | Complete |
 | LSTM-05 | Phase 9 | Complete |
 | LSTM-06 | Phase 9 | Complete |
-| LSTM-07 | Phase 10 | Pending |
-| LSTM-08 | Phase 10 | Pending |
+| LSTM-07 | Phase 10 | Complete |
+| LSTM-08 | Phase 10 | Complete |
 
 **Coverage:**
 - v1.2.1 requirements: 8 total

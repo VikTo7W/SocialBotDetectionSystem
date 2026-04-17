@@ -1,30 +1,47 @@
 # Phase 10 Verification
 
 **Phase:** 10 - Evaluation and Baseline Comparison  
-**Status:** planned  
+**Status:** complete  
 **Last updated:** 2026-04-16
 
-## Planned checks
+## Checks run
 
 1. `python -m pytest tests/test_evaluate.py -q`
-   - goal: prove the Phase 10 comparison and reporting contract
+   - result: `17 passed`
 2. `python main.py`
-   - goal: run the real BotSim S3 AMR-vs-LSTM comparison path and emit its artifact(s)
+   - result: completed and wrote [10-real-run-variant-comparison.json](c:/Users/dzeni/PycharmProjects/SocialBotDetectionSystem/.planning/workstreams/stage2b-lstm-version/phases/10-evaluation-and-baseline-comparison/10-real-run-variant-comparison.json)
+3. `python ablation_tables.py`
+   - result: completed and exported:
+     - `tables/table5_stage2b_variant_comparison.tex`
+     - `tables/table6_stage2b_routing_comparison.tex`
 
-## What execution must prove
+## Real comparison outcome
 
-1. The workstream can compare AMR and LSTM on the real BotSim S3 cascade path.
-2. The comparison includes both overall metrics and routing behavior.
-3. The codebase can emit a compact comparison artifact and reusable tables.
-4. The final recommendation can honestly keep AMR as the baseline if LSTM is only different, not clearly better.
+- **Recommended variant:** `lstm`
+- **Recommendation status:** `challenger_better`
+- **Primary rationale:** LSTM beat AMR on final F1 by `0.0165`, exceeding the configured recommendation margin of `0.01`
 
-## Requirement targets
+### Overall metrics
 
-- `LSTM-07` targeted
-  - the workstream can compare the LSTM Stage 2b variant against the AMR baseline on meaningful metrics or routing behavior
-- `LSTM-08` targeted
-  - workstream artifacts record whether LSTM is better, worse, or merely different, and on what evidence
+| Variant | F1 | AUC | Precision | Recall |
+|---------|----|-----|-----------|--------|
+| `amr` | `0.9767` | `0.9992` | `0.9735` | `0.9800` |
+| `lstm` | `0.9933` | `0.9997` | `1.0000` | `0.9867` |
+
+### Routing behavior
+
+| Variant | Stage 1 Exit % | Stage 2 Exit % | Stage 3 Exit % | Stage 2b Route % |
+|---------|----------------|----------------|----------------|------------------|
+| `amr` | `46.68` | `42.11` | `11.21` | `50.11` |
+| `lstm` | `7.09` | `71.62` | `21.28` | `91.30` |
+
+## Interpretation
+
+1. Requirement `LSTM-07` is satisfied because the repo now performs a real BotSim S3 comparison between AMR and LSTM and records both metric and routing differences.
+2. Requirement `LSTM-08` is satisfied because the milestone artifacts now state clearly that LSTM is better on this evaluation path, while also preserving the routing-cost tradeoff.
+3. The result is not merely a routing shift: the LSTM variant improved the headline evaluation metrics as well.
+4. The stronger LSTM result comes with heavier Stage 2b and Stage 3 usage, so future deployment decisions should consider runtime and cascade-cost implications.
 
 ## Exit criteria
 
-Phase 10 is complete when the repo has real S3 AMR-vs-LSTM evidence, compact reusable comparison outputs, and an explicit evidence-backed recommendation.
+Phase 10 is complete: the repo has real S3 AMR-vs-LSTM evidence, compact reusable comparison outputs, and an explicit evidence-backed recommendation.

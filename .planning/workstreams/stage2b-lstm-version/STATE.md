@@ -4,9 +4,9 @@ workstream: stage2b-lstm-version
 milestone: v1.2.1
 milestone_name: Stage 2b LSTM Variant
 created: 2026-04-16
-status: ready_to_execute
-stopped_at: Phase 10 plans written; ready for execution
-last_updated: "2026-04-16T21:47:00Z"
+status: complete
+stopped_at: Phase 10 executed; real AMR-vs-LSTM comparison and reusable tables recorded
+last_updated: "2026-04-16T23:59:00Z"
 ---
 
 # Project State
@@ -16,26 +16,25 @@ last_updated: "2026-04-16T21:47:00Z"
 See: `.planning/workstreams/stage2b-lstm-version/PROJECT.md`
 
 **Core value:** The cascade must still produce a single, well-calibrated bot probability per account while letting us test whether a sequence-model Stage 2b adds useful signal beyond the current AMR-inspired refinement path.
-**Current focus:** Execute Phase 10 to produce the real BotSim S3 AMR-vs-LSTM comparison, compact report, and reusable tables.
+**Current focus:** Milestone complete; Phase 10 captured the final AMR-vs-LSTM comparison and recommendation.
 
 ## Current Position
-**Status:** Planned
+**Status:** Complete
 **Current Phase:** Phase 10 - Evaluation and Baseline Comparison
 **Last Activity:** 2026-04-16
-**Last Activity Description:** Phase 10 plans written for real S3 comparison evidence, reusable tables, and final recommendation output
+**Last Activity Description:** Phase 10 executed; real S3 comparison, recommendation artifact, and reusable tables recorded
 
 ## Progress
-**Phases Complete:** 2
-**Current Plan:** Ready for execution
+**Phases Complete:** 3
+**Current Plan:** None - milestone complete
 
 ## Blockers/Concerns
 
-- The LSTM variant is now integrated through both `train_system()` and `predict_system()`.
-- Phase 10 must compare AMR and LSTM on the real BotSim S3 path, not just synthetic or fixture-backed evidence.
-- The final recommendation should remain neutral and evidence-driven; AMR may still be the outcome.
-- Planning assumed no separate research phase was needed because the comparison surfaces (`main.py`, `evaluate.py`, `ablation_tables.py`) are already local and well-understood from prior work.
+- The real S3 comparison recommended `lstm`, but with materially higher Stage 2b and Stage 3 routing, so operational cost should be considered before making it the permanent default.
+- The reusable comparison outputs now live in the Phase 10 artifact JSON and the exported Stage 2b comparison tables.
+- Planning assumed no separate research phase was needed because the comparison surfaces (`main.py`, `evaluate.py`, `ablation_tables.py`) were already local and well-understood, and execution validated that assumption.
 
 ## Session Continuity
 **Last Session:** 2026-04-16
-**Stopped At:** Phase 10 plans written; ready for execution
-**Resume File:** .planning/workstreams/stage2b-lstm-version/phases/10-evaluation-and-baseline-comparison/10-01-PLAN.md
+**Stopped At:** Milestone complete after Phase 10 execution
+**Resume File:** .planning/workstreams/stage2b-lstm-version/phases/10-evaluation-and-baseline-comparison/10-VERIFICATION.md

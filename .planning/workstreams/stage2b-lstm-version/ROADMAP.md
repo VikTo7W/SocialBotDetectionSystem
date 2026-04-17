@@ -17,7 +17,7 @@ phase_range: "8-10"
 
 - [x] **Phase 8: LSTM Stage 2b Foundation** - Define the Stage 2b LSTM data/model contract and get deterministic training behavior working
 - [x] **Phase 9: Cascade Integration and Variant Selection** - Integrate the LSTM Stage 2b path into the cascade without breaking the AMR baseline
-- [ ] **Phase 10: Evaluation and Baseline Comparison** - Compare the LSTM variant against the AMR delta-refiner path and record the outcome
+- [x] **Phase 10: Evaluation and Baseline Comparison** - Compare the LSTM variant against the AMR delta-refiner path and record the outcome
 
 ## Phase Details
 
@@ -57,8 +57,8 @@ Plans:
   3. The milestone artifacts preserve the final recommendation and supporting evidence
 **Plans**: 2 plans
 Plans:
-- [ ] 10-01-PLAN.md - Real S3 AMR-vs-LSTM comparison path and evidence artifact
-- [ ] 10-02-PLAN.md - Compact comparison tables and final recommendation record
+- [x] 10-01-PLAN.md - Real S3 AMR-vs-LSTM comparison path and evidence artifact
+- [x] 10-02-PLAN.md - Compact comparison tables and final recommendation record
 
 ## Progress Table
 
@@ -66,7 +66,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 8. LSTM Stage 2b Foundation | 2/2 | Complete | 2026-04-16 |
 | 9. Cascade Integration and Variant Selection | 2/2 | Complete | 2026-04-16 |
-| 10. Evaluation and Baseline Comparison | 0/2 | Planned | - |
+| 10. Evaluation and Baseline Comparison | 2/2 | Complete | 2026-04-16 |
 
 ---
 *Roadmap created: 2026-04-16*
