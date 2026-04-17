@@ -4,11 +4,14 @@ tests/test_evaluate_twibot20.py — Unit tests for evaluate_twibot20.py (Phase 9
 Covers:
   TW-04 — run_inference() returns correct 11-column DataFrame schema and
            runs without error on synthetic TwiBot-20 data.
-  TW-05 — Stage 1 ratio columns 6–9 are clamped to [0.0, 50.0] inside the
-           TwiBot-20 inference path; BotSim-24 direct path is NOT clamped.
+  TW-05 — Stage 1 ratio columns 6–9 are clamped to [0.0, _RATIO_CAP] inside
+           the TwiBot-20 inference path; BotSim-24 direct path is NOT clamped.
+  FEAT-02 — Column adapter maps behavioral counts (RT/MT/original) from
+             parse_tweet_types() into Stage 1 slots (Phase 8).
 
 Wave 1 (this plan): tests 1, 2, 4 green.
 Wave 2 (Plan 02):   tests 3, 5 green (plus __main__ block implementation).
+Phase 8 (08-01):    FEAT-02 adapter tests added.
 """
 from __future__ import annotations
 
@@ -388,4 +391,164 @@ def test_botsim_path_not_clamped():
     assert X1[:, 6:10].max() > 50.0, (
         "Expected ratio columns to be > 50.0 in BotSim-24 direct path "
         f"(confirming no global clamping); got max={X1[:, 6:10].max()}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# FEAT-02: Behavioral adapter column mapping tests (Phase 8, Plan 08-01)
+# ---------------------------------------------------------------------------
+
+def _make_twibot_df_with_tweets(n: int = 3) -> pd.DataFrame:
+    """Build a TwiBot-20 DataFrame where messages contain RT/MT/original tweets."""
+    # Account 0: 2 RT, 1 MT, 1 original  -> submission_num=1, c1=2, c2=1, sr=[alice,bob]
+    # Account 1: 0 tweets                 -> all zeros (D-11)
+    # Account 2: 3 original tweets        -> submission_num=3, c1=0, c2=0, sr=[]
+    messages_per_account = [
+        [
+            {"text": "RT @alice: some tweet",    "ts": None, "kind": "tweet"},
+            {"text": "RT @bob: another tweet",   "ts": None, "kind": "tweet"},
+            {"text": "MT @alice: modified tweet","ts": None, "kind": "tweet"},
+            {"text": "just an original tweet",   "ts": None, "kind": "tweet"},
+        ],
+        [],
+        [
+            {"text": "original one",  "ts": None, "kind": "tweet"},
+            {"text": "original two",  "ts": None, "kind": "tweet"},
+            {"text": "original three","ts": None, "kind": "tweet"},
+        ],
+    ]
+    labels = [0, 1, 0][:n]
+    return pd.DataFrame({
+        "account_id":     [f"tw_{i:03d}" for i in range(n)],
+        "node_idx":       np.arange(n, dtype=np.int32),
+        "screen_name":    [f"user_{i}" for i in range(n)],
+        "statuses_count": [10] * n,
+        "followers_count":[100] * n,
+        "friends_count":  [50] * n,
+        "created_at":     ["Mon Jan 01 00:00:00 +0000 2020"] * n,
+        "label":          labels,
+        "messages":       messages_per_account[:n],
+    })
+
+
+def test_behavioral_adapter_submission_num_is_original_count(minimal_system, tmp_path):
+    """submission_num must equal original_count from parse_tweet_types() (D-06, FEAT-02)."""
+    sys_obj, _, _, _ = minimal_system
+    path = _make_twibot_json(tmp_path, n=3)
+    df = _make_twibot_df_with_tweets(n=3)
+    edges = _make_twibot_edges(n=3)
+
+    captured_df = {}
+
+    def _spy_predict(sys_loaded, df_inner, edges_df, **kwargs):
+        captured_df["df"] = df_inner.copy()
+        from botdetector_pipeline import predict_system as _real_predict
+        return _real_predict(sys_loaded, df_inner, edges_df, **kwargs)
+
+    from unittest.mock import patch
+
+    with patch("evaluate_twibot20.load_accounts", return_value=df), \
+         patch("evaluate_twibot20.build_edges", return_value=edges), \
+         patch("evaluate_twibot20.validate", return_value=None), \
+         patch("evaluate_twibot20.joblib.load", return_value=sys_obj), \
+         patch("evaluate_twibot20.predict_system", side_effect=_spy_predict):
+
+        run_inference(path, "fake_model.joblib")
+
+    adapted = captured_df["df"]
+    # Account 0: 1 original tweet
+    assert adapted.iloc[0]["submission_num"] == 1.0, (
+        f"Account 0: expected submission_num=1.0 (original_count), "
+        f"got {adapted.iloc[0]['submission_num']}"
+    )
+    # Account 1: 0 tweets -> 0 originals
+    assert adapted.iloc[1]["submission_num"] == 0.0, (
+        f"Account 1 (zero-tweet): expected submission_num=0.0, "
+        f"got {adapted.iloc[1]['submission_num']}"
+    )
+    # Account 2: 3 original tweets
+    assert adapted.iloc[2]["submission_num"] == 3.0, (
+        f"Account 2: expected submission_num=3.0, "
+        f"got {adapted.iloc[2]['submission_num']}"
+    )
+
+
+def test_behavioral_adapter_comment_num_1_is_rt_count(minimal_system, tmp_path):
+    """comment_num_1 must equal rt_count from parse_tweet_types() (D-07, FEAT-02)."""
+    sys_obj, _, _, _ = minimal_system
+    path = _make_twibot_json(tmp_path, n=3)
+    df = _make_twibot_df_with_tweets(n=3)
+    edges = _make_twibot_edges(n=3)
+
+    captured_df = {}
+
+    def _spy_predict(sys_loaded, df_inner, edges_df, **kwargs):
+        captured_df["df"] = df_inner.copy()
+        from botdetector_pipeline import predict_system as _real_predict
+        return _real_predict(sys_loaded, df_inner, edges_df, **kwargs)
+
+    from unittest.mock import patch
+
+    with patch("evaluate_twibot20.load_accounts", return_value=df), \
+         patch("evaluate_twibot20.build_edges", return_value=edges), \
+         patch("evaluate_twibot20.validate", return_value=None), \
+         patch("evaluate_twibot20.joblib.load", return_value=sys_obj), \
+         patch("evaluate_twibot20.predict_system", side_effect=_spy_predict):
+
+        run_inference(path, "fake_model.joblib")
+
+    adapted = captured_df["df"]
+    # Account 0: 2 RT tweets
+    assert adapted.iloc[0]["comment_num_1"] == 2.0, (
+        f"Account 0: expected comment_num_1=2.0 (rt_count), "
+        f"got {adapted.iloc[0]['comment_num_1']}"
+    )
+    # Account 1: 0 tweets -> 0 RTs
+    assert adapted.iloc[1]["comment_num_1"] == 0.0, (
+        f"Account 1 (zero-tweet): expected comment_num_1=0.0, "
+        f"got {adapted.iloc[1]['comment_num_1']}"
+    )
+
+
+def test_behavioral_adapter_subreddit_list_is_rt_mt_usernames(minimal_system, tmp_path):
+    """subreddit_list must be the list of distinct @usernames from RT/MT tweets (D-09, FEAT-02)."""
+    sys_obj, _, _, _ = minimal_system
+    path = _make_twibot_json(tmp_path, n=3)
+    df = _make_twibot_df_with_tweets(n=3)
+    edges = _make_twibot_edges(n=3)
+
+    captured_df = {}
+
+    def _spy_predict(sys_loaded, df_inner, edges_df, **kwargs):
+        captured_df["df"] = df_inner.copy()
+        from botdetector_pipeline import predict_system as _real_predict
+        return _real_predict(sys_loaded, df_inner, edges_df, **kwargs)
+
+    from unittest.mock import patch
+
+    with patch("evaluate_twibot20.load_accounts", return_value=df), \
+         patch("evaluate_twibot20.build_edges", return_value=edges), \
+         patch("evaluate_twibot20.validate", return_value=None), \
+         patch("evaluate_twibot20.joblib.load", return_value=sys_obj), \
+         patch("evaluate_twibot20.predict_system", side_effect=_spy_predict):
+
+        run_inference(path, "fake_model.joblib")
+
+    adapted = captured_df["df"]
+    # Account 0: RT @alice, RT @bob, MT @alice -> distinct: [alice, bob]
+    sr0 = adapted.iloc[0]["subreddit_list"]
+    assert isinstance(sr0, list), f"subreddit_list must be a list, got {type(sr0)}"
+    assert set(sr0) == {"alice", "bob"}, (
+        f"Account 0: expected subreddit_list={{'alice','bob'}}, got {sr0}"
+    )
+    assert len(sr0) == 2, f"Account 0: expected 2 distinct usernames, got {len(sr0)}"
+    # Account 1: zero tweets -> empty list
+    assert adapted.iloc[1]["subreddit_list"] == [], (
+        f"Account 1 (zero-tweet): expected empty subreddit_list, "
+        f"got {adapted.iloc[1]['subreddit_list']}"
+    )
+    # Account 2: 3 originals -> no usernames
+    assert adapted.iloc[2]["subreddit_list"] == [], (
+        f"Account 2 (all original): expected empty subreddit_list, "
+        f"got {adapted.iloc[2]['subreddit_list']}"
     )

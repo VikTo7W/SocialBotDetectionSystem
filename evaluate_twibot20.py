@@ -21,11 +21,18 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from twibot20_io import load_accounts, build_edges, validate
+from twibot20_io import load_accounts, build_edges, validate, parse_tweet_types
 from features_stage1 import extract_stage1_matrix as _orig_extract_stage1_matrix
 import botdetector_pipeline as bp
 from botdetector_pipeline import predict_system, TrainedSystem
 from evaluate import evaluate_s3
+
+# TwiBot-20 tweet counts are bounded by the Twitter 3200-tweet API limit.
+# Ratio columns (post_c1/c2/ct/sr, indices 6-9) can still blow up for accounts
+# with near-zero RT or MT counts. Empirically, 99th-percentile ratios in
+# TwiBot-20 are well below 1000.0, so this cap is conservative and correct.
+# (FEAT-03: reviewed for Twitter tweet-count distributions — cap unchanged.)
+_RATIO_CAP = 1000.0
 
 
 def run_inference(
@@ -68,21 +75,38 @@ def run_inference(
         raw = json.load(f)
 
     df = accounts_df.copy()
-    df["account_id"]     = [r["ID"] for r in raw]                   # D-07
-    df["username"]       = df["screen_name"]                         # D-03
-    df["submission_num"] = df["statuses_count"].astype(float)        # D-02
-    df["comment_num_1"]  = 0.0                                       # D-03
-    df["comment_num_2"]  = 0.0                                       # D-03
-    df["subreddit_list"] = [[] for _ in range(len(df))]              # D-03
+    df["account_id"] = [r["ID"] for r in raw]   # stable Twitter user ID (D-07)
+    df["username"]   = df["screen_name"]         # keep screen_name (D-03)
+
+    # Behavioral tweet adapter (FEAT-01, FEAT-02)
+    # parse_tweet_types() classifies each account's tweets into RT/MT/original
+    # buckets and extracts distinct @usernames from RT/MT tweets.
+    tweet_stats = [parse_tweet_types(msgs) for msgs in df["messages"]]
+    df["submission_num"] = [float(s["original_count"]) for s in tweet_stats]  # D-06
+    df["comment_num_1"]  = [float(s["rt_count"])       for s in tweet_stats]  # D-07
+    df["comment_num_2"]  = [float(s["mt_count"])       for s in tweet_stats]  # D-08
+    df["subreddit_list"] = [s["rt_mt_usernames"]       for s in tweet_stats]  # D-09
+
+    # Tweet type distribution diagnostics (D-12)
+    n_accts = len(tweet_stats)
+    total_rt   = sum(s["rt_count"]       for s in tweet_stats)
+    total_mt   = sum(s["mt_count"]       for s in tweet_stats)
+    total_orig = sum(s["original_count"] for s in tweet_stats)
+    zero_tweet_frac = sum(
+        1 for s in tweet_stats
+        if s["rt_count"] + s["mt_count"] + s["original_count"] == 0
+    ) / n_accts
+    print(f"[twibot20] tweet distribution: RT={total_rt}, MT={total_mt}, original={total_orig}")
+    print(f"[twibot20] zero-tweet fraction: {zero_tweet_frac:.3f}")
 
     # Step 4 — Stage 1 ratio clamping via monkey-patch (TW-05, D-04)
-    # predict_system() calls bp.extract_stage1_matrix() internally (line 647).
+    # predict_system() calls bp.extract_stage1_matrix() internally.
     # Pre-clipping X1 before the call would have no effect. Instead, we
     # temporarily replace bp.extract_stage1_matrix with a clamped wrapper and
     # restore the original in a finally block (T-09-01 mitigation).
     def _clamped_s1(df_inner, *args, **kwargs):
         X = _orig_extract_stage1_matrix(df_inner)
-        X[:, 6:10] = np.clip(X[:, 6:10], 0.0, 50.0)  # clamp post_c1/c2/ct/sr
+        X[:, 6:10] = np.clip(X[:, 6:10], 0.0, _RATIO_CAP)  # cap post_c1/c2/ct/sr
         return X
 
     bp.extract_stage1_matrix = _clamped_s1
