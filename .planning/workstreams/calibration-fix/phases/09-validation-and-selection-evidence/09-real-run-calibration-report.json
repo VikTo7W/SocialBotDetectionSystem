@@ -1,0 +1,103 @@
+{
+  "alternatives": [
+    {
+      "behavior": {
+        "amr_usage_rate": 0.9151376146788991,
+        "positive_predictions": 149,
+        "stage3_usage_rate": 0.14678899082568808
+      },
+      "delta_vs_selected": {
+        "amr_usage_rate": 0.4701834862385321,
+        "positive_predictions": 0,
+        "primary_score": 0.0,
+        "secondary_brier": 1.8183113510166285e-05,
+        "secondary_log_loss": 0.00023557046250499356,
+        "stage3_usage_rate": 0.08944954128440367
+      },
+      "primary_score": 0.9966555183946488,
+      "secondary_brier": 0.002988725884415943,
+      "secondary_log_loss": 0.016618326283321737,
+      "trial_number": 7
+    },
+    {
+      "behavior": {
+        "amr_usage_rate": 0.6376146788990825,
+        "positive_predictions": 149,
+        "stage3_usage_rate": 0.13073394495412843
+      },
+      "delta_vs_selected": {
+        "amr_usage_rate": 0.19266055045871555,
+        "positive_predictions": 0,
+        "primary_score": 0.0,
+        "secondary_brier": 2.66462916850025e-05,
+        "secondary_log_loss": 0.000625772162251341,
+        "stage3_usage_rate": 0.07339449541284403
+      },
+      "primary_score": 0.9966555183946488,
+      "secondary_brier": 0.0029971890625907793,
+      "secondary_log_loss": 0.017008527983068084,
+      "trial_number": 4
+    },
+    {
+      "behavior": {
+        "amr_usage_rate": 0.44495412844036697,
+        "positive_predictions": 149,
+        "stage3_usage_rate": 0.18807339449541285
+      },
+      "delta_vs_selected": {
+        "amr_usage_rate": 0.0,
+        "positive_predictions": 0,
+        "primary_score": 0.0,
+        "secondary_brier": 0.0003364358878839655,
+        "secondary_log_loss": 0.0009459576345955505,
+        "stage3_usage_rate": 0.13073394495412843
+      },
+      "primary_score": 0.9966555183946488,
+      "secondary_brier": 0.0033069786587897423,
+      "secondary_log_loss": 0.017328713455412294,
+      "trial_number": 2
+    }
+  ],
+  "executed_trials": 8,
+  "metric": "f1",
+  "plateau_patience": 12,
+  "requested_trials": 8,
+  "selected_trial": {
+    "amr_usage_rate": 0.44495412844036697,
+    "positive_predictions": 149,
+    "primary_score": 0.9966555183946488,
+    "rank": 1,
+    "secondary_brier": 0.0029705427709057768,
+    "secondary_log_loss": 0.016382755820816743,
+    "stage3_usage_rate": 0.05733944954128441,
+    "thresholds": {
+      "disagreement_trigger": 5.789631185585098,
+      "n1_max_for_exit": 2.5230688458668533,
+      "n2_trigger": 1.4883605700319193,
+      "novelty_force_stage3": 3.2007624686980067,
+      "s12_bot": 0.9417108070868219,
+      "s12_human": 0.2897239778892932,
+      "s1_bot": 0.833934300613771,
+      "s1_human": 0.12190142552838625,
+      "s2a_bot": 0.9837167756387466,
+      "s2a_human": 0.020450426302598575
+    },
+    "trial_number": 3
+  },
+  "selection_policy": {
+    "plateau_guardrail": "patience-based early stop on no lexicographic improvement",
+    "primary_metric": "f1",
+    "secondary_metrics": [
+      "secondary_log_loss",
+      "secondary_brier"
+    ],
+    "strategy": "hybrid"
+  },
+  "stopped_early": false,
+  "tie_analysis": {
+    "best_primary_score": 0.9966555183946488,
+    "best_tie_count": 8,
+    "same_hard_predictions": true,
+    "same_routing": false
+  }
+}
