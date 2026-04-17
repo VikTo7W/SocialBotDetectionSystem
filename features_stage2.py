@@ -8,6 +8,7 @@ import pandas as pd
 from typing import List, Dict, Any, Optional
 
 _NEAR_DUP_SIM_THRESHOLD = 0.9
+_MISSING_TEMPORAL_SENTINEL = -1.0
 
 
 def simple_linguistic_features(text: str) -> np.ndarray:
@@ -82,6 +83,10 @@ def extract_stage2_features(df: pd.DataFrame, embedder, max_msgs: int = 50, max_
             ling_pool = np.zeros(4, dtype=np.float32)
 
         # temporal stats
+        # When tweets exist but all timestamps are unavailable, use a dedicated
+        # sentinel instead of ordinary zeros so zero-shot transfer does not
+        # confuse "missing" with "low activity".
+        temporal_missing = len(messages) > 0 and len(ts) == 0
         if len(ts) >= 2:
             ts_sorted = np.sort(np.array(ts, dtype=np.float64))
             deltas = np.diff(ts_sorted)
@@ -89,12 +94,18 @@ def extract_stage2_features(df: pd.DataFrame, embedder, max_msgs: int = 50, max_
             rate = len(ts_sorted) / span
             delta_mean = float(np.mean(deltas))
             delta_std = float(np.std(deltas))
+        elif temporal_missing:
+            rate = _MISSING_TEMPORAL_SENTINEL
+            delta_mean = _MISSING_TEMPORAL_SENTINEL
+            delta_std = _MISSING_TEMPORAL_SENTINEL
         else:
             rate, delta_mean, delta_std = 0.0, 0.0, 0.0
 
         # FEAT-01: CoV of inter-post intervals
         if len(ts) >= 2:
             cv_intervals = float(delta_std / max(delta_mean, 1e-6))
+        elif temporal_missing:
+            cv_intervals = _MISSING_TEMPORAL_SENTINEL
         else:
             cv_intervals = 0.0
 
@@ -113,6 +124,8 @@ def extract_stage2_features(df: pd.DataFrame, embedder, max_msgs: int = 50, max_
             probs = counts / counts.sum()
             nonzero = probs[probs > 0]
             hour_entropy = float(-np.sum(nonzero * np.log2(nonzero)))
+        elif temporal_missing:
+            hour_entropy = _MISSING_TEMPORAL_SENTINEL
         else:
             hour_entropy = 0.0
 

@@ -53,6 +53,7 @@ def _make_twibot_df(n: int = 5, high_statuses: bool = False) -> pd.DataFrame:
         "created_at":     ["Mon Jan 01 00:00:00 +0000 2020"] * n,
         "label":          labels,
         "messages":       [[{"text": "hello world", "ts": None, "kind": "tweet"}]] * n,
+        "domain_list":    [["Politics"]] * n,
         "profile":        [""] * n,
     })
 
@@ -68,8 +69,31 @@ def _make_twibot_edges(n: int = 5) -> pd.DataFrame:
 
 
 def _make_twibot_json(tmp_path, n: int = 5) -> str:
-    """Write synthetic TwiBot-20 JSON to tmp_path and return its path."""
-    records = [{"ID": f"tw_{i:03d}", "label": "1" if i % 2 else "0"} for i in range(n)]
+    """Write synthetic TwiBot-20 JSON to tmp_path and return its path.
+
+    Each record includes a minimal profile plus RT/MT/original tweets so the
+    behavioral adapter path can run without reading demographic proxies.
+    """
+    records = []
+    for i in range(n):
+        records.append({
+            "ID": f"tw_{i:03d}",
+            "label": "1" if i % 2 else "0",
+            "profile": {
+                "screen_name": f"user_{i}",
+                "statuses_count": "0",
+                "followers_count": "0",
+                "friends_count": "0",
+                "created_at": "Mon Jan 01 00:00:00 +0000 2020",
+            },
+            "tweet": [
+                f"RT @target_{i}: amplified content from user {i}",
+                f"MT @other_{i}: modified retweet from user {i}",
+                f"original thought number {i}",
+            ],
+            "domain": ["Politics", "News"],
+            "neighbor": None,
+        })
     path = str(tmp_path / "test.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(records, f)
@@ -400,9 +424,9 @@ def test_botsim_path_not_clamped():
 
 def _make_twibot_df_with_tweets(n: int = 3) -> pd.DataFrame:
     """Build a TwiBot-20 DataFrame where messages contain RT/MT/original tweets."""
-    # Account 0: 2 RT, 1 MT, 1 original  -> submission_num=1, c1=2, c2=1, sr=[alice,bob]
+    # Account 0: 2 RT, 1 MT, 1 original  -> submission_num=4, c1=1, c2=1, sr=domain
     # Account 1: 0 tweets                 -> all zeros (D-11)
-    # Account 2: 3 original tweets        -> submission_num=3, c1=0, c2=0, sr=[]
+    # Account 2: 3 original tweets        -> submission_num=3, c1=3, c2=0, sr=domain
     messages_per_account = [
         [
             {"text": "RT @alice: some tweet",    "ts": None, "kind": "tweet"},
@@ -428,11 +452,12 @@ def _make_twibot_df_with_tweets(n: int = 3) -> pd.DataFrame:
         "created_at":     ["Mon Jan 01 00:00:00 +0000 2020"] * n,
         "label":          labels,
         "messages":       messages_per_account[:n],
+        "domain_list":    [["Politics", "News"], [], ["Sports"]][:n],
     })
 
 
-def test_behavioral_adapter_submission_num_is_original_count(minimal_system, tmp_path):
-    """submission_num must equal original_count from parse_tweet_types() (D-06, FEAT-02)."""
+def test_behavioral_adapter_submission_num_is_total_tweet_count(minimal_system, tmp_path):
+    """submission_num must equal total tweet volume under the revised adapter."""
     sys_obj, _, _, _ = minimal_system
     path = _make_twibot_json(tmp_path, n=3)
     df = _make_twibot_df_with_tweets(n=3)
@@ -456,9 +481,9 @@ def test_behavioral_adapter_submission_num_is_original_count(minimal_system, tmp
         run_inference(path, "fake_model.joblib")
 
     adapted = captured_df["df"]
-    # Account 0: 1 original tweet
-    assert adapted.iloc[0]["submission_num"] == 1.0, (
-        f"Account 0: expected submission_num=1.0 (original_count), "
+    # Account 0: 4 total tweets
+    assert adapted.iloc[0]["submission_num"] == 4.0, (
+        f"Account 0: expected submission_num=4.0 (total tweet count), "
         f"got {adapted.iloc[0]['submission_num']}"
     )
     # Account 1: 0 tweets -> 0 originals
@@ -466,15 +491,15 @@ def test_behavioral_adapter_submission_num_is_original_count(minimal_system, tmp
         f"Account 1 (zero-tweet): expected submission_num=0.0, "
         f"got {adapted.iloc[1]['submission_num']}"
     )
-    # Account 2: 3 original tweets
+    # Account 2: 3 total tweets
     assert adapted.iloc[2]["submission_num"] == 3.0, (
         f"Account 2: expected submission_num=3.0, "
         f"got {adapted.iloc[2]['submission_num']}"
     )
 
 
-def test_behavioral_adapter_comment_num_1_is_rt_count(minimal_system, tmp_path):
-    """comment_num_1 must equal rt_count from parse_tweet_types() (D-07, FEAT-02)."""
+def test_behavioral_adapter_comment_num_1_is_original_count(minimal_system, tmp_path):
+    """comment_num_1 must equal authored non-RT/non-MT tweets under the revised adapter."""
     sys_obj, _, _, _ = minimal_system
     path = _make_twibot_json(tmp_path, n=3)
     df = _make_twibot_df_with_tweets(n=3)
@@ -498,9 +523,9 @@ def test_behavioral_adapter_comment_num_1_is_rt_count(minimal_system, tmp_path):
         run_inference(path, "fake_model.joblib")
 
     adapted = captured_df["df"]
-    # Account 0: 2 RT tweets
-    assert adapted.iloc[0]["comment_num_1"] == 2.0, (
-        f"Account 0: expected comment_num_1=2.0 (rt_count), "
+    # Account 0: 1 authored original tweet
+    assert adapted.iloc[0]["comment_num_1"] == 1.0, (
+        f"Account 0: expected comment_num_1=1.0 (original_count), "
         f"got {adapted.iloc[0]['comment_num_1']}"
     )
     # Account 1: 0 tweets -> 0 RTs
@@ -510,8 +535,15 @@ def test_behavioral_adapter_comment_num_1_is_rt_count(minimal_system, tmp_path):
     )
 
 
-def test_behavioral_adapter_subreddit_list_is_rt_mt_usernames(minimal_system, tmp_path):
-    """subreddit_list must be the list of distinct @usernames from RT/MT tweets (D-09, FEAT-02)."""
+    # Account 2: 3 authored original tweets
+    assert adapted.iloc[2]["comment_num_1"] == 3.0, (
+        f"Account 2: expected comment_num_1=3.0 (original_count), "
+        f"got {adapted.iloc[2]['comment_num_1']}"
+    )
+
+
+def test_behavioral_adapter_comment_num_2_is_mt_count(minimal_system, tmp_path):
+    """comment_num_2 must equal mt_count from parse_tweet_types()."""
     sys_obj, _, _, _ = minimal_system
     path = _make_twibot_json(tmp_path, n=3)
     df = _make_twibot_df_with_tweets(n=3)
@@ -535,20 +567,96 @@ def test_behavioral_adapter_subreddit_list_is_rt_mt_usernames(minimal_system, tm
         run_inference(path, "fake_model.joblib")
 
     adapted = captured_df["df"]
-    # Account 0: RT @alice, RT @bob, MT @alice -> distinct: [alice, bob]
+    assert adapted.iloc[0]["comment_num_2"] == 1.0
+    assert adapted.iloc[1]["comment_num_2"] == 0.0
+    assert adapted.iloc[2]["comment_num_2"] == 0.0
+
+
+def test_behavioral_adapter_subreddit_list_is_domain_list(minimal_system, tmp_path):
+    """subreddit_list must use TwiBot domain breadth under the revised adapter."""
+    sys_obj, _, _, _ = minimal_system
+    path = _make_twibot_json(tmp_path, n=3)
+    df = _make_twibot_df_with_tweets(n=3)
+    edges = _make_twibot_edges(n=3)
+
+    captured_df = {}
+
+    def _spy_predict(sys_loaded, df_inner, edges_df, **kwargs):
+        captured_df["df"] = df_inner.copy()
+        from botdetector_pipeline import predict_system as _real_predict
+        return _real_predict(sys_loaded, df_inner, edges_df, **kwargs)
+
+    from unittest.mock import patch
+
+    with patch("evaluate_twibot20.load_accounts", return_value=df), \
+         patch("evaluate_twibot20.build_edges", return_value=edges), \
+         patch("evaluate_twibot20.validate", return_value=None), \
+         patch("evaluate_twibot20.joblib.load", return_value=sys_obj), \
+         patch("evaluate_twibot20.predict_system", side_effect=_spy_predict):
+
+        run_inference(path, "fake_model.joblib")
+
+    adapted = captured_df["df"]
     sr0 = adapted.iloc[0]["subreddit_list"]
     assert isinstance(sr0, list), f"subreddit_list must be a list, got {type(sr0)}"
-    assert set(sr0) == {"alice", "bob"}, (
-        f"Account 0: expected subreddit_list={{'alice','bob'}}, got {sr0}"
+    assert sr0 == ["Politics", "News"], (
+        f"Account 0: expected subreddit_list=['Politics', 'News'], got {sr0}"
     )
-    assert len(sr0) == 2, f"Account 0: expected 2 distinct usernames, got {len(sr0)}"
     # Account 1: zero tweets -> empty list
     assert adapted.iloc[1]["subreddit_list"] == [], (
         f"Account 1 (zero-tweet): expected empty subreddit_list, "
         f"got {adapted.iloc[1]['subreddit_list']}"
     )
-    # Account 2: 3 originals -> no usernames
-    assert adapted.iloc[2]["subreddit_list"] == [], (
-        f"Account 2 (all original): expected empty subreddit_list, "
+    # Account 2: domain still available even with all-original tweets
+    assert adapted.iloc[2]["subreddit_list"] == ["Sports"], (
+        f"Account 2 (all original): expected domain-driven subreddit_list, "
         f"got {adapted.iloc[2]['subreddit_list']}"
     )
+
+
+def test_adapter_uses_parse_tweet_types_for_columns(minimal_system, tmp_path, capsys):
+    """Behavioral adapter columns come from parse_tweet_types(), not profile counts."""
+    sys_obj, _, _, _ = minimal_system
+    n = 5
+    path = _make_twibot_json(tmp_path, n=n)
+
+    captured_dfs = []
+    import evaluate_twibot20
+
+    real_predict = evaluate_twibot20.predict_system
+
+    def spy_predict(sys_loaded, df, edges_df, nodes_total):
+        captured_dfs.append(df.copy())
+        return real_predict(sys_loaded, df, edges_df, nodes_total)
+
+    from unittest.mock import patch
+
+    with patch("evaluate_twibot20.joblib.load", return_value=sys_obj), \
+         patch("evaluate_twibot20.predict_system", side_effect=spy_predict):
+        evaluate_twibot20.run_inference(path, "fake.joblib")
+
+    assert len(captured_dfs) == 1, "predict_system must be called exactly once"
+    df = captured_dfs[0]
+    assert df["submission_num"].tolist() == [3] * n
+    assert df["comment_num_1"].tolist() == [1] * n
+    assert df["comment_num_2"].tolist() == [1] * n
+    assert [len(s) for s in df["subreddit_list"]] == [2] * n
+    assert all(isinstance(u, str) for u in df["subreddit_list"].iloc[0])
+
+
+def test_adapter_logs_tweet_distribution(minimal_system, tmp_path, capsys):
+    """The adapter prints tweet distribution diagnostics to stdout."""
+    sys_obj, _, _, _ = minimal_system
+    path = _make_twibot_json(tmp_path, n=4)
+
+    from unittest.mock import patch
+    import evaluate_twibot20
+
+    with patch("evaluate_twibot20.joblib.load", return_value=sys_obj):
+        evaluate_twibot20.run_inference(path, "fake.joblib")
+
+    captured = capsys.readouterr().out
+    assert "tweet distribution" in captured
+    assert "zero-tweet fraction" in captured
+    assert "domain breadth" in captured
+    assert "timestamp-missing fraction" in captured

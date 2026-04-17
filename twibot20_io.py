@@ -10,6 +10,34 @@ import pandas as pd
 
 _no_neighbor_count: int = 0
 
+# UTF-16 BOM signatures (LE and BE).
+_UTF16_BOMS = (b"\xff\xfe", b"\xfe\xff")
+
+
+def _detect_encoding(path: str) -> str:
+    """Return the correct text encoding for a JSON file.
+
+    Reads the first two bytes to detect a UTF-16 BOM.  Falls back to UTF-8
+    for all other files (including plain UTF-8 and UTF-8-with-BOM, which
+    Python's utf-8-sig codec handles transparently — but those files will
+    not have 0xff/0xfe at byte 0, so the check is safe).
+
+    Parameters
+    ----------
+    path : str
+        Path to the file to inspect.
+
+    Returns
+    -------
+    str
+        ``"utf-16"`` when a UTF-16 BOM is present, ``"utf-8"`` otherwise.
+    """
+    with open(path, "rb") as fb:
+        header = fb.read(2)
+    if header in _UTF16_BOMS:
+        return "utf-16"
+    return "utf-8"
+
 
 def load_accounts(path: str) -> pd.DataFrame:
     """Load TwiBot-20 accounts from a JSON file into a BotSim-24-compatible DataFrame.
@@ -23,12 +51,14 @@ def load_accounts(path: str) -> pd.DataFrame:
     -------
     pd.DataFrame
         DataFrame with columns: node_idx (int32), screen_name, statuses_count,
-        followers_count, friends_count, created_at, messages, label (int).
+        followers_count, friends_count, created_at, messages, domain_list,
+        label (int).
     """
     global _no_neighbor_count
     _no_neighbor_count = 0
 
-    with open(path, "r", encoding="utf-8") as f:
+    encoding = _detect_encoding(path)
+    with open(path, "r", encoding=encoding) as f:
         data = json.load(f)
 
     rows: List[Dict[str, Any]] = []
@@ -46,6 +76,11 @@ def load_accounts(path: str) -> pd.DataFrame:
             "friends_count": int(str(profile.get("friends_count", 0) or 0).strip() or 0),
             "created_at": str(profile.get("created_at", "") or "").strip(),
             "messages": messages,
+            "domain_list": [
+                str(d).strip()
+                for d in (record.get("domain") or [])
+                if str(d).strip()
+            ],
             "label": int(record["label"]),
         })
 
@@ -72,7 +107,8 @@ def build_edges(accounts_df: pd.DataFrame, path: str) -> pd.DataFrame:
         Weight is log1p(1.0) for all edges.
         Cross-set IDs (not in the evaluation file) are silently dropped.
     """
-    with open(path, "r", encoding="utf-8") as f:
+    encoding = _detect_encoding(path)
+    with open(path, "r", encoding=encoding) as f:
         data = json.load(f)
 
     # Build lookup: Twitter string ID -> node_idx
@@ -125,7 +161,7 @@ def validate(accounts_df: pd.DataFrame, edges_df: pd.DataFrame) -> None:
     """
     required_cols = [
         "node_idx", "screen_name", "statuses_count", "followers_count",
-        "friends_count", "created_at", "messages", "label",
+        "friends_count", "created_at", "messages", "domain_list", "label",
     ]
     missing = [c for c in required_cols if c not in accounts_df.columns]
     assert not missing, f"Missing columns: {missing}"
