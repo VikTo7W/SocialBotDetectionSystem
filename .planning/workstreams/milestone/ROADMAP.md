@@ -4,7 +4,8 @@
 
 - [x] **v1.0 MVP** - Phases 1-4 (shipped 2026-04-12)
 - [x] **v1.1 Feature Leakage Audit & Fix** - Phases 5-7 (shipped 2026-04-16)
-- [ ] **v1.2 TwiBot-20 Cross-Domain Transfer** - Phases 8-10 (active)
+- [x] **v1.2 TwiBot-20 Cross-Domain Transfer** - Phases 8-10 (shipped 2026-04-18)
+- [ ] **v1.3 Twibot System Version** - Phases 11-13 (active)
 
 ## Phases
 
@@ -20,6 +21,15 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 
 </details>
 
+<details open>
+<summary>v1.3 Twibot System Version (Phases 11-13) - ACTIVE</summary>
+
+- [ ] **Phase 11: Reproducible TwiBot Evaluation Flow** - Harden the TwiBot evaluation path so static and recalibrated runs can generate stable artifacts without the current temp/cache fragility
+- [ ] **Phase 12: Fresh Transfer Evidence and Paper Outputs** - Run fresh TwiBot comparisons, validate the observed transfer behavior, and regenerate the cross-dataset paper outputs from live artifacts
+- [ ] **Phase 13: System Version Packaging and Release Docs** - Publish the chosen TwiBot system version with explicit artifacts, commands, caveats, and release-facing documentation
+
+</details>
+
 <details>
 <summary>[x] v1.1 Feature Leakage Audit & Fix (Phases 5-7) - SHIPPED 2026-04-16</summary>
 
@@ -31,12 +41,12 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details.
 
 </details>
 
-<details open>
-<summary>v1.2 TwiBot-20 Cross-Domain Transfer (Phases 8-10) - ACTIVE</summary>
+<details>
+<summary>[x] v1.2 TwiBot-20 Cross-Domain Transfer (Phases 8-10) - SHIPPED 2026-04-18</summary>
 
 - [x] **Phase 8: Behavioral Tweet Parser and Transfer Adapter Stabilization** - Replace demographic-proxy transfer assumptions with behaviorally-grounded Twitter equivalents and stabilize zero-shot transfer when TwiBot fields are systematically missing
-- [ ] **Phase 9: Sliding-Window Online Threshold Recalibration** - One-line description
-- [ ] **Phase 10: Cross-Domain Evaluation and Paper Output** - One-line description
+- [x] **Phase 9: Sliding-Window Online Threshold Recalibration** - Adjust novelty routing thresholds online from buffered TwiBot novelty scores without retraining
+- [x] **Phase 10: Cross-Domain Evaluation and Paper Output** - Compare static vs recalibrated TwiBot transfer and export paper-ready cross-dataset metrics
 
 </details>
 
@@ -54,8 +64,8 @@ See `.planning/milestones/v1.1-ROADMAP.md` for full phase details.
   5. The ratio cap is reviewed against TwiBot-20 tweet-count distributions; the cap value is either retained with documented justification or updated, and the decision is recorded
 **Plans**: 2 plans
 Plans:
-- [ ] 08-01-PLAN.md - Add parse_tweet_types() in twibot20_io.py with TDD coverage of RT/MT/original classification, case-insensitivity, @username extraction, and dedup (FEAT-01)
-- [ ] 08-02-PLAN.md - Rewrite the transfer adapter in evaluate_twibot20.py, add distribution/missingness logging, review/document `_RATIO_CAP`, and verify TwiBot transfer behavior (FEAT-02, FEAT-03, FEAT-04)
+- [x] 08-01-PLAN.md - Add parse_tweet_types() in twibot20_io.py with TDD coverage of RT/MT/original classification, case-insensitivity, @username extraction, and dedup (FEAT-01)
+- [x] 08-02-PLAN.md - Rewrite the transfer adapter in evaluate_twibot20.py, add distribution/missingness logging, review/document `_RATIO_CAP`, and verify TwiBot transfer behavior (FEAT-02, FEAT-03, FEAT-04)
 **UI hint**: no
 
 ### Phase 9: Sliding-Window Online Threshold Recalibration
@@ -67,7 +77,7 @@ Plans:
   2. The window size N is configurable via a parameter (default 100), and changing N produces different update cadences without code changes
   3. When fewer than N accounts have been processed (cold start), the calibrator leaves the original trained thresholds unchanged rather than producing degenerate values
   4. The calibrator can be toggled off so that the original static thresholds are used, allowing before/after comparison in Phase 10
-**Plans**: TBD
+**Plans**: 1 plan
 **UI hint**: no
 
 ### Phase 10: Cross-Domain Evaluation and Paper Output
@@ -75,9 +85,48 @@ Plans:
 **Depends on**: Phase 8, Phase 9
 **Requirements**: EVAL-01, EVAL-02
 **Success Criteria** (what must be TRUE):
-  1. Running the evaluation script on TwiBot-20 produces F1, AUC, precision, and recall under both conditions: (a) current demographic proxy adapter and (b) revised transfer adapter
+  1. Running the evaluation script on TwiBot-20 produces F1, AUC, precision, and recall under both conditions: (a) revised transfer adapter with static thresholds and (b) revised transfer adapter with online recalibration
   2. The before/after comparison is printed in a structured format that makes the performance delta immediately readable
   3. A LaTeX table is generated comparing BotSim-24 in-domain performance against TwiBot-20 zero-shot transfer performance, formatted to drop into the paper's robustness section without manual editing
+**Plans**: 2 plans
+Plans:
+- [x] 10-01-PLAN.md - Add Phase 10 TwiBot before/after comparison for static vs online-recalibrated thresholds and persist comparison artifacts (EVAL-01)
+- [x] 10-02-PLAN.md - Generate the final cross-dataset LaTeX table from BotSim-24 plus both TwiBot conditions (EVAL-02)
+**UI hint**: no
+
+### Phase 11: Reproducible TwiBot Evaluation Flow
+**Goal**: The TwiBot evaluation path can be run reproducibly in the local environment and emits stable artifacts for both static and recalibrated evaluation modes
+**Depends on**: Phase 10
+**Requirements**: REPRO-01, REPRO-02, REPRO-03
+**Success Criteria** (what must be TRUE):
+  1. Running the TwiBot evaluation entry point produces static and recalibrated artifacts in a stable, documented output location
+  2. The artifact-generation path does not depend on fragile default temp/cache directories for normal successful runs
+  3. The artifact filenames and payload structures are explicit enough for downstream tooling and paper generation to consume reliably
+**Plans**: 2 plans
+Plans:
+- [ ] 11-01-PLAN.md - Fix two failing test stubs in tests/test_evaluate_twibot20.py so Phase 9 kwargs forwarding is absorbed by monkeypatched lambdas (REPRO-02, REPRO-03)
+- [ ] 11-02-PLAN.md - Add output_dir argument + os.path.join routing to evaluate_twibot20.py __main__, document canonical command and artifact payloads in the module docstring, and add TWIBOT_COMPARISON_PATH env-var override in ablation_tables.py (REPRO-01, REPRO-02, REPRO-03)
+**UI hint**: no
+
+### Phase 12: Fresh Transfer Evidence and Paper Outputs
+**Goal**: Fresh TwiBot comparison evidence and cross-dataset outputs are generated from live runs and recorded as the current transfer result
+**Depends on**: Phase 11
+**Requirements**: EVID-01, EVID-02, EVID-03
+**Success Criteria** (what must be TRUE):
+  1. A fresh static-vs-recalibrated TwiBot run completes and saves comparison metrics from the current revised adapter
+  2. The final LaTeX cross-dataset table is regenerated from live BotSim-24 and TwiBot artifacts
+  3. The milestone records whether recalibration helped, hurt, or made no meaningful difference on TwiBot transfer
+**Plans**: TBD
+**UI hint**: no
+
+### Phase 13: System Version Packaging and Release Docs
+**Goal**: The TwiBot transfer system version is packaged as a reproducible, documented release artifact set for future evaluation and reporting
+**Depends on**: Phase 12
+**Requirements**: VERS-01, VERS-02, VERS-03
+**Success Criteria** (what must be TRUE):
+  1. The chosen TwiBot system version explicitly names the model artifact, comparison mode(s), and output files it ships with
+  2. A developer can follow the docs to reproduce the TwiBot system-version artifacts end to end
+  3. The release docs clearly state the remaining caveats, environment assumptions, and known limitations
 **Plans**: TBD
 **UI hint**: no
 
@@ -93,5 +142,8 @@ Plans:
 | 6. Ablation Infrastructure and Differentiator Features | v1.1 | 2/2 | Complete | 2026-04-15 |
 | 7. Ablation Execution and Paper Tables | v1.1 | 2/2 | Complete | 2026-04-15 |
 | 8. Behavioral Tweet Parser and Transfer Adapter Stabilization | v1.2 | 2/2 | Complete | 2026-04-17 |
-| 9. Sliding-Window Online Threshold Recalibration | v1.2 | 0/? | Not started | - |
-| 10. Cross-Domain Evaluation and Paper Output | v1.2 | 0/? | Not started | - |
+| 9. Sliding-Window Online Threshold Recalibration | v1.2 | 1/1 | Complete | 2026-04-18 |
+| 10. Cross-Domain Evaluation and Paper Output | v1.2 | 2/2 | Complete | 2026-04-18 |
+| 11. Reproducible TwiBot Evaluation Flow | v1.3 | 0/2 | Not started | - |
+| 12. Fresh Transfer Evidence and Paper Outputs | v1.3 | 0/? | Not started | - |
+| 13. System Version Packaging and Release Docs | v1.3 | 0/? | Not started | - |
