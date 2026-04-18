@@ -68,21 +68,21 @@ Refactor the full system into a single parameterized codebase shared across BotS
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| CORE-01 | — | Pending |
-| CORE-02 | — | Pending |
-| CORE-03 | — | Pending |
-| CORE-04 | — | Pending |
-| CORE-05 | — | Pending |
-| TRAIN-01 | — | Pending |
-| TRAIN-02 | — | Pending |
-| EVAL-01 | — | Pending |
-| EVAL-02 | — | Pending |
-| EVAL-03 | — | Pending |
-| PAPER-01 | — | Pending |
-| PAPER-02 | — | Pending |
-| PAPER-03 | — | Pending |
-| QUAL-01 | — | Pending |
-| QUAL-02 | — | Pending |
-| DOC-01 | — | Pending |
-| DOC-02 | — | Pending |
-| DOC-03 | — | Pending |
+| CORE-01 | Phase 17 | Pending |
+| CORE-02 | Phase 17 | Pending |
+| CORE-05 | Phase 17 | Pending |
+| CORE-03 | Phase 18 | Pending |
+| CORE-04 | Phase 18 | Pending |
+| QUAL-01 | Phase 18 | Pending |
+| QUAL-02 | Phase 18 | Pending |
+| TRAIN-01 | Phase 19 | Pending |
+| TRAIN-02 | Phase 19 | Pending |
+| EVAL-01 | Phase 20 | Pending |
+| EVAL-02 | Phase 20 | Pending |
+| EVAL-03 | Phase 20 | Pending |
+| PAPER-01 | Phase 20 | Pending |
+| PAPER-02 | Phase 20 | Pending |
+| PAPER-03 | Phase 20 | Pending |
+| DOC-01 | Phase 21 | Pending |
+| DOC-02 | Phase 21 | Pending |
+| DOC-03 | Phase 21 | Pending |
