@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: executing
-stopped_at: v1.3 initialized; next clean step is plan Phase 11
-last_updated: "2026-04-18T11:30:15.818Z"
-last_activity: 2026-04-18 -- Phase 11 planning complete
+milestone: v1.3
+milestone_name: Twibot System Version
+status: in_progress
+stopped_at: Phase 11 complete, ready to plan Phase 12
+last_updated: "2026-04-18T12:30:00.000Z"
+last_activity: 2026-04-18 -- Phase 11 complete (4/4 UAT passed)
 ---
 
 # Project State
@@ -19,12 +19,12 @@ See: `.planning/PROJECT.md` and `.planning/workstreams/milestone/ROADMAP.md`
 
 ## Current Position
 
-Phase: Not started (Phase 11 is next)
-Plan: -
-Status: Ready to execute
-Last activity: 2026-04-18 -- Phase 11 planning complete
+Phase: 12 of 13 — Fresh Transfer Evidence and Paper Outputs
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-04-18 — Phase 11 complete (4/4 UAT passed)
 
-Progress: v1.3 is initialized from the deferred v1.2 TwiBot evidence and verification gaps. No phase plans have been created yet.
+Progress: Phase 11 complete. TwiBot evaluation path hardened: output_dir routing, stable artifact filenames, documented canonical command, TWIBOT_COMPARISON_PATH env-var override. Phase 12 is next.
 
 ## Performance Metrics
 
@@ -61,12 +61,12 @@ Carried forward context from v1.2 close:
 
 ### Blockers/Concerns
 
-- Verification inside this environment is still partially affected by Windows temp and process-permission issues
-- The paper-ready comparison path is implemented, but fresh TwiBot outputs still need to be generated for final evidence
-- The normal environment still shows temp/cache permission friction that may need explicit mitigation in Phase 11
+- Windows friction is pytest tmp_path cleanup permissions only — production code has zero tempfile usage (confirmed Phase 11)
+- Fresh TwiBot outputs still need to be generated for final evidence (Phase 12 scope)
+- metrics_twibot20_comparison.json does not exist yet — Phase 12 must generate it via a live run
 
 ## Session Continuity
 
 Last session: 2026-04-18
-Stopped at: v1.3 initialized; next clean step is plan Phase 11
+Stopped at: Phase 11 complete, ready to plan Phase 12
 Resume file: None

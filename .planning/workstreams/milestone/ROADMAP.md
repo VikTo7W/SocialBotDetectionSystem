@@ -24,7 +24,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 <details open>
 <summary>v1.3 Twibot System Version (Phases 11-13) - ACTIVE</summary>
 
-- [ ] **Phase 11: Reproducible TwiBot Evaluation Flow** - Harden the TwiBot evaluation path so static and recalibrated runs can generate stable artifacts without the current temp/cache fragility
+- [x] **Phase 11: Reproducible TwiBot Evaluation Flow** - Harden the TwiBot evaluation path so static and recalibrated runs can generate stable artifacts without the current temp/cache fragility (2/2 plans) - completed 2026-04-18
 - [ ] **Phase 12: Fresh Transfer Evidence and Paper Outputs** - Run fresh TwiBot comparisons, validate the observed transfer behavior, and regenerate the cross-dataset paper outputs from live artifacts
 - [ ] **Phase 13: System Version Packaging and Release Docs** - Publish the chosen TwiBot system version with explicit artifacts, commands, caveats, and release-facing documentation
 
@@ -144,6 +144,6 @@ Plans:
 | 8. Behavioral Tweet Parser and Transfer Adapter Stabilization | v1.2 | 2/2 | Complete | 2026-04-17 |
 | 9. Sliding-Window Online Threshold Recalibration | v1.2 | 1/1 | Complete | 2026-04-18 |
 | 10. Cross-Domain Evaluation and Paper Output | v1.2 | 2/2 | Complete | 2026-04-18 |
-| 11. Reproducible TwiBot Evaluation Flow | v1.3 | 0/2 | Not started | - |
+| 11. Reproducible TwiBot Evaluation Flow | v1.3 | 2/2 | Complete | 2026-04-18 |
 | 12. Fresh Transfer Evidence and Paper Outputs | v1.3 | 0/? | Not started | - |
 | 13. System Version Packaging and Release Docs | v1.3 | 0/? | Not started | - |

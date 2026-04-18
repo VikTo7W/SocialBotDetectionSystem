@@ -2,100 +2,115 @@
 
 ## What This Is
 
-A multi-stage cascade classifier for detecting social bots on Reddit using the BotSim-24 dataset. The system progressively escalates accounts through three detection stages (metadata → content/temporal → graph structure), using novelty-aware routing to balance compute efficiency with accuracy. Designed as a research contribution: the cascade architecture with AMR semantic refinement is the novel element, targeting a paper submission with competitive results.
+A multi-stage cascade classifier for detecting social bots on Reddit using the BotSim-24 dataset. The system escalates accounts through three detection stages (metadata -> content/temporal -> graph structure), using novelty-aware routing to balance compute efficiency with accuracy. The research contribution is the cascade architecture with AMR semantic refinement and zero-shot transfer experiments.
 
-v1.0 delivered: Bayesian threshold calibration (Optuna TPE), a paper-ready S3 evaluation module, and a REST API for single-account inference.
-v1.1 delivered: Feature leakage removal from Stage 2a, 6 new behavioral/similarity features, full cascade retrain on clean features, and four paper-ready LaTeX ablation tables.
+v1.0 delivered Bayesian threshold calibration, a paper-ready S3 evaluation module, and a REST API for single-account inference.
+v1.1 delivered Stage 2 leakage removal, new behavioral and similarity features, a clean retrain, and paper-ready ablation tables.
 
-## Current Milestone: v1.2 TwiBot-20 Cross-Domain Transfer
+## Current State
 
-**Goal:** Achieve meaningful zero-shot transfer performance on TwiBot-20 by replacing Reddit-specific Stage 1 features with behaviorally-grounded Twitter equivalents (RT/MT/original tweet counts + engagement breadth), and introducing a sliding-window online threshold calibrator that adjusts routing thresholds unsupervised as accounts are processed.
+v1.2 shipped the TwiBot-20 zero-shot transfer path for the Reddit-trained cascade. The codebase now includes a behaviorally grounded Twitter adapter, missingness-aware TwiBot feature handling, online novelty-threshold recalibration, and a paper-output path for static-vs-recalibrated TwiBot comparison.
+
+The milestone closed with acknowledged gaps rather than a pristine verification finish:
+
+- fresh real-data TwiBot comparison artifacts still need to be regenerated
+- final pytest/runtime verification remains partially blocked by local Windows temp/process permission issues
+- no dedicated v1.2 milestone audit was run before close
+
+## Next Milestone Goals
+
+- Regenerate TwiBot comparison evidence and confirm whether recalibration materially improves transfer quality
+- Decide whether the next step is better zero-shot robustness, a supervised TwiBot baseline, or a broader Stage 2/Stage 3 domain adaptation effort
+- Tighten planning/state hygiene so requirements and verification stay current during execution rather than only at closeout
+
+## Current Milestone: v1.3 Twibot System Version
+
+**Goal:** Turn the TwiBot transfer path into a reproducible, evidence-backed system version with fresh evaluation artifacts, cleaner execution flow, and an explicit versioned release record.
 
 **Target features:**
-- Behavioral tweet parser: classify each account's tweets into RT / MT / original; extract distinct @usernames from RT/MT tweets
-- Stage 1 feature adapter: submission_num ← original tweets, comment_num_1 ← RT count, comment_num_2 ← MT count, subreddit_list ← distinct @usernames in RT/MT tweets
-- Sliding-window online threshold recalibration: update routing thresholds every N accounts from running novelty score buffer (unsupervised)
-- Paper metrics: F1, AUC, precision/recall on TwiBot-20 before/after behavioral adapter
-- LaTeX cross-dataset table for the paper robustness section
+- Reproducible TwiBot evaluation flow that can run static and recalibrated comparisons without the current temp/cache friction
+- Fresh live artifacts for TwiBot metrics, comparison outputs, and the final cross-dataset table
+- Explicit system-version documentation describing the chosen model artifact, commands, outputs, and remaining caveats
 
 ## Core Value
 
-The cascade must produce a single, well-calibrated bot probability per account — routing efficiently through stages while catching sophisticated bots that simple models miss.
+The cascade must produce a single, well-calibrated bot probability per account while routing efficiently through stages and remaining interpretable when transferred out of domain.
 
 ## Requirements
 
 ### Validated
 
-- ✓ Stage 1 metadata classifier — LightGBM on numeric metadata (counts, ratios, name length) with Mahalanobis novelty scoring and CalibratedClassifierCV — v1.0
-- ✓ Stage 2a content/temporal classifier — Sentence-transformer embeddings (MiniLM) fused with linguistic/temporal features, LightGBM + calibration + novelty — v1.0
-- ✓ Stage 2b AMR delta refiner — learned logit adjustment from AMR embeddings via gradient descent, applied to gated subset — v1.0
-- ✓ Stage 3 structural classifier — LightGBM on graph-derived features (weighted/unweighted in/out degrees per edge type) with calibration + novelty — v1.0
-- ✓ AMR gating logic — gate_amr() applies AMR refinement only when p2a is uncertain, novelty is high, or Stage 1/2 strongly disagree — v1.0
-- ✓ Stage 3 routing logic — gate_stage3() escalates accounts when p12 is uncertain or novelty is high — v1.0
-- ✓ Meta12 stacking combiner — logistic regression over Stage 1 + Stage 2 logits, novelty scores, and amr_used flag — v1.0
-- ✓ Meta123 final combiner — logistic regression over meta12 + Stage 3 outputs with stage3_used flag — v1.0
-- ✓ OOF stacking for leakage-free meta-model training — StratifiedKFold over S2 split — v1.0
-- ✓ S1/S2/S3 data splits — ~70%/15%/15% stratified splits with per-split graph edge filtering — v1.0
-- ✓ BotSim-24 data loading — CSV parsing, JSON deserialization, timestamp normalization, account table construction — v1.0
-- ✓ TrainedSystem encapsulation — single dataclass holding all trained models, configs, embedder — v1.0
-- ✓ Threshold calibration via Bayesian optimization — Optuna TPE over 10 routing thresholds on S2, maximizing F1 — v1.0
-- ✓ REST API wrapper — POST /predict endpoint accepting JSON account data, returning p_final + label — v1.0
-- ✓ End-to-end evaluation pipeline — full S3 metrics (F1, AUC, precision/recall) + per-stage breakdown + routing statistics — v1.0
-- ✓ Feature leakage removed — username/profile embeddings, profile AMR anchor, and character_setting column eliminated from Stage 2a — v1.1
-- ✓ Behavioral features (FEAT-01/02/03) — cv_intervals, char_len_mean, char_len_std, hour_entropy added to Stage 2a (395-dim vector) — v1.1
-- ✓ Cross-message similarity features (FEAT-04) — cross_msg_sim_mean and near_dup_frac added at indices 395-396 (397-dim vector) — v1.1
-- ✓ Paper ablation tables — 4 LaTeX tables (leakage audit, stage contribution, routing efficiency, Stage 1 feature group ablation) generated by ablation_tables.py — v1.1
+- Stage 1 metadata classifier - LightGBM on numeric metadata with Mahalanobis novelty scoring and calibrated probabilities - v1.0
+- Stage 2a content/temporal classifier - sentence-transformer embeddings fused with linguistic/temporal features, LightGBM, calibration, and novelty - v1.0
+- Stage 2b AMR delta refiner - learned logit adjustment from AMR-style embeddings, applied to gated subsets - v1.0
+- Stage 3 structural classifier - LightGBM on graph-derived degree and weight features with calibration and novelty - v1.0
+- AMR gating logic - AMR refinement activates on uncertainty, disagreement, or novelty - v1.0
+- Stage 3 routing logic - escalation triggers on uncertainty or novelty - v1.0
+- Meta12 stacking combiner - logistic regression over Stage 1 and Stage 2 outputs plus routing signals - v1.0
+- Meta123 final combiner - logistic regression over meta12 and Stage 3 outputs with routing signal - v1.0
+- OOF stacking for leakage-free meta-model training - v1.0
+- S1/S2/S3 data splits with intra-split graph filtering - v1.0
+- BotSim-24 data loading and normalization - v1.0
+- TrainedSystem encapsulation - v1.0
+- Threshold calibration via Bayesian optimization - v1.0
+- REST API wrapper - v1.0
+- End-to-end evaluation pipeline with per-stage breakdown and routing statistics - v1.0
+- Feature leakage removed from Stage 2 paths - v1.1
+- Behavioral and cross-message similarity features added to Stage 2a - v1.1
+- Paper ablation tables generated from the clean feature set - v1.1
+- Reproducible TwiBot evaluation flow with output_dir routing, stable artifact filenames, documented canonical command, and TWIBOT_COMPARISON_PATH env-var override - v1.3 Phase 11
 
 ### Active
 
-- [ ] Run ablation_tables.py end-to-end with real trained_system_v12.joblib to produce actual paper numbers
-- [ ] Multi-seed ablation stability (3 seeds) for paper confidence intervals — CAL-02
-- [ ] CalibratedClassifierCV on held-out calibration subset — CAL-01
-- [ ] True AMR graph parsing replacing the text-embedding stub — AMR-01
+- Generate fresh static-vs-recalibrated evidence and final paper outputs from live runs
+- Publish the chosen TwiBot system version and its execution/documentation contract
+- Multi-seed ablation stability for paper confidence intervals
+- CalibratedClassifierCV on a held-out calibration subset
+- True AMR graph parsing replacing the current embedding stub
 
 ### Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Real-time streaming classification | Batch inference only; architectural change |
-| Multi-platform detection | BotSim-24 (Reddit) only |
-| Frontend / dashboard UI | API only |
-| Model retraining via API | Offline training only |
-| Profile/description features of any kind | Root cause of leakage — permanently excluded from Stage 2 |
+| Real-time streaming classification | Batch inference only |
+| Multi-platform supervised training | v1.2 is zero-shot transfer only |
+| Frontend or dashboard UI | API and scripts only |
+| Model retraining through the API | Offline training only |
+| Profile or description features | Permanently excluded after the leakage audit |
+| Full Twitter-native Stage 2 or Stage 3 redesign | Deferred beyond transfer stabilization |
 
 ## Context
 
-- **Dataset:** BotSim-24 — Reddit account dataset with Users.csv (metadata) and user_post_comment.json (timeline). Graph edges stored as PyTorch tensors (edge_index.pt, edge_type.pt, edge_weight.pt).
-- **Architecture:** Three-stage cascade with novelty-aware gating. Each stage produces (p, u, n, z). Meta-learners combine stages via logistic regression stacking. Novelty overrides confidence — high novelty forces escalation regardless of classifier confidence.
-- **Current state (v1.1):** trained_system_v12.joblib is the active model (397-dim, clean features). trained_system_v11.joblib preserved as 395-dim baseline. 36 tests green. ablation_tables.py unit-tested against synthetic data; end-to-end paper run pending.
-- **AMR status:** Stage 2b is implemented as a learned delta-logit over sentence-transformer embeddings of text. True AMR graph parsing is a stub — the semantic representation is approximated via embedding similarity. This is the "Option C delta updater" design.
-- **Paper contribution:** The cascade architecture + novelty-aware routing + AMR refinement combination is the novel element. Ablation study infrastructure is complete; actual paper numbers require the end-to-end run.
-- **AUC note:** Stage 2a AUC 0.97-0.98 on BotSim-24 S3 is legitimate — bots post generic news summaries while humans post specific headlines; sentence transformer separates these by content alone. The pre-v1.1 estimate of 70-85% was overly conservative.
+- **Dataset:** BotSim-24 provides Reddit metadata, timelines, and graph tensors. TwiBot-20 is the zero-shot transfer target for v1.2.
+- **Architecture:** Three-stage cascade with novelty-aware gating and logistic-regression stackers.
+- **Current state:** `trained_system_v12.joblib` is the active clean model. v1.3 starts from an implemented but not fully evidenced TwiBot transfer path and focuses on reproducible execution plus release-quality artifacts.
+- **AMR status:** The Stage 2b semantic path is still an embedding-based proxy, not true AMR graph parsing.
+- **Paper contribution:** The novel contribution remains the cascade plus routing and semantic refinement, now strengthened by explicit cross-domain transfer analysis.
 
 ## Constraints
 
-- **Tech stack:** Python + scikit-learn + LightGBM + sentence-transformers + PyTorch (tensor loading only) — no changes to core ML stack
-- **No data leakage:** S1/S2/S3 splits must remain strictly separated; graph edges must only use intra-split nodes; meta-models trained with OOF predictions only; no profile/username/character_setting fields in features
-- **Reproducibility:** All experiments must be seeded (SEED=42); results must be reproducible for paper submission
-- **API input format:** JSON account data must match the schema derivable from BotSim-24 Users.csv + user_post_comment.json fields
+- **Tech stack:** Python, scikit-learn, LightGBM, sentence-transformers, and PyTorch tensor loading only
+- **No leakage:** keep split boundaries, graph filtering, OOF stacking, and Stage 2 leakage exclusions intact
+- **Zero-shot transfer:** TwiBot-20 labels are for evaluation, not adaptation or retraining
+- **Reproducibility:** seed all experiments with `SEED=42`
+- **Feature shape stability:** Phase 8 may revise semantics and missingness handling, but should not retrain models or change expected feature dimensionality
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| AMR as delta-logit updater (Option C) | Avoids full second classifier; treats AMR as incremental evidence; reduces compute | ✓ Good |
-| Mahalanobis distance for novelty | Analytically grounded OOD detection; no need for separate novelty model | ✓ Good |
-| Logistic regression for meta-learners | Interpretable; resistant to overfitting on small S2 set; produces calibrated probabilities | ✓ Good |
-| Bayesian optimization for thresholds (Optuna TPE) | More sample-efficient than grid search; scikit-optimize dropped due to Python 3.13 incompatibility | ✓ Working, 10 dims, reproducible |
-| S1/S2/S3 three-way split | Avoids leakage in meta-learner training; S3 is fully held out for final evaluation | ✓ Good |
-| Eager module-level joblib.load in api.py | Starlette TestClient doesn't trigger async lifespan; eager load makes tests work while lifespan handles production | ✓ Working |
-| s2a_bot lower bound enforced | Prevents threshold inversion during Bayesian search (bot threshold below human threshold) | ✓ Necessary |
-| Atomic leakage fix (both paths in one commit + retrain) | Residual leakage risk if one path fixed without the other | ✓ Correct — both paths removed atomically in feat(05-01) |
-| AMR anchor switched to most-recent message text | profile field was identity leakage; last message is behaviorally meaningful | ✓ Good |
-| AUC 0.97-0.98 accepted as legitimate (v1.1) | Code inspection confirmed no leakage paths remain; BotSim-24 content signal is genuinely strong | ✓ Confirmed — not residual leakage |
-| ABL-01/ABL-03 dropped (v1.1) | predict_system() already runs all stages unconditionally; evaluate_s3() already reports p1/p12/p_final; force-routing adds no information | ✓ Correct simplification |
-| v11 artifact preserved alongside v12 | 395-dim baseline needed for leakage audit table (Table 1) comparing v1.0 vs v1.1 | ✓ Good |
-| Monkey-patch targets botdetector_pipeline.extract_stage1_matrix | from-import creates local binding in bp module scope; patching source module would not intercept calls | ✓ Correct |
+| AMR as delta-logit updater | Preserves AMR as incremental evidence instead of a second full classifier | Good |
+| Mahalanobis distance for novelty | Analytically grounded OOD signal without extra model training | Good |
+| Logistic regression for meta-learners | Interpretable and resistant to overfitting on the small stacking set | Good |
+| Bayesian optimization for thresholds | More sample-efficient than grid search and compatible with current environment | Working |
+| S1/S2/S3 split discipline | Prevents leakage during training and evaluation | Good |
+| Preserve v11 alongside v12 | Needed for leakage-audit and ablation comparisons | Good |
+| Phase 8 scope revised on 2026-04-17 | Saved TwiBot results showed collapse, so the frozen Stage 1 mapping was reopened and missingness-aware stabilization was allowed without retraining | Adopted in v1.2 |
+| TwiBot `domain` is eligible for `subreddit_list` analog | It is a closer topical-breadth signal than RT/MT usernames for Reddit transfer | Adopted in v1.2 |
+| Missingness-aware handling is allowed when TwiBot fields are systematically absent | Hard-zero defaults can create misleading in-distribution signals in zero-shot transfer | Adopted in v1.2 |
+| Phase 10 before/after semantics changed during execution | The live comparison now means static thresholds vs online recalibration on the revised adapter, not a return to the deprecated demographic-proxy path | Adopted in v1.2 |
+| Windows temp friction is pytest-level, not production | grep confirmed zero tempfile/gettempdir usage in production code; friction is pytest tmp_path cleanup permissions only | Confirmed Phase 11 |
+| output_dir parameter added to evaluate_twibot20.py __main__ | Artifacts route through os.path.join(output_dir, ...) with os.makedirs; backward-compatible default is cwd | Adopted v1.3 Phase 11 |
 
 ---
-*Last updated: 2026-04-16 after v1.1 milestone completion*
+*Last updated: 2026-04-18 after Phase 11 (Reproducible TwiBot Evaluation Flow)*
