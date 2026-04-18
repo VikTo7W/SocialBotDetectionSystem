@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Twibot System Version
-status: in_progress
-stopped_at: Phase 12 complete, ready to plan Phase 13
-last_updated: "2026-04-18T13:00:00.000Z"
-last_activity: 2026-04-18 -- Phase 12 complete (fresh TwiBot artifacts generated)
+status: complete
+stopped_at: v1.3 milestone closed — all phases and plans complete, archived, tagged
+last_updated: "2026-04-18T17:00:00.000Z"
+last_activity: 2026-04-18 -- Phase 13 complete (VERSION.md and README.md authored)
 ---
 
 # Project State
@@ -15,16 +15,16 @@ last_activity: 2026-04-18 -- Phase 12 complete (fresh TwiBot artifacts generated
 See: `.planning/PROJECT.md` and `.planning/workstreams/milestone/ROADMAP.md`
 
 **Core value:** The cascade must produce a single, well-calibrated bot probability per account while routing efficiently through stages and remaining interpretable when transferred out of domain.
-**Current focus:** Phase 13 — System Version Packaging and Release Docs
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 13 of 13 — System Version Packaging and Release Docs
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-04-18 — Phase 12 complete (fresh TwiBot artifacts generated)
+Phase: 13 of 13 — complete
+Plan: All plans complete
+Status: v1.3 milestone closed and archived
+Last activity: 2026-04-18 — v1.3 archived to .planning/milestones/v1.3-ROADMAP.md
 
-Progress: Phases 11-12 complete. Fresh TwiBot evidence generated: static AUC=0.5964, recalibrated AUC=0.5879, verdict=no_material_change. Table 5 LaTeX regenerated from live artifacts. Phase 13 is the final phase.
+Progress: All 13 phases complete across v1.0–v1.3. v1.3 closed with VERSION.md release contract, README.md reproduction guide, and live TwiBot evidence (no_material_change verdict). Run /gsd-new-milestone to start v1.4.
 
 ## Performance Metrics
 

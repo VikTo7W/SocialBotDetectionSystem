@@ -11,26 +11,21 @@ v1.1 delivered Stage 2 leakage removal, new behavioral and similarity features, 
 
 v1.2 shipped the TwiBot-20 zero-shot transfer path for the Reddit-trained cascade. The codebase now includes a behaviorally grounded Twitter adapter, missingness-aware TwiBot feature handling, online novelty-threshold recalibration, and a paper-output path for static-vs-recalibrated TwiBot comparison.
 
-The milestone closed with acknowledged gaps rather than a pristine verification finish:
+v1.3 shipped the reproducible evaluation flow, fresh live TwiBot evidence (static F1=0.0/AUC=0.5964, recalibrated F1=0.0/AUC=0.5879, verdict=`no_material_change`), and release-facing documentation (`VERSION.md` + `README.md` reproduction guide with caveats and limitations).
 
-- fresh real-data TwiBot comparison artifacts still need to be regenerated
-- final pytest/runtime verification remains partially blocked by local Windows temp/process permission issues
-- no dedicated v1.2 milestone audit was run before close
+## Current State
+
+v1.3 shipped 2026-04-18. The active model is `trained_system_v12.joblib`. Zero-shot TwiBot transfer produces weak but reproducible results; recalibration does not materially improve F1. The pipeline is well-documented and reproducible from `README.md`.
+
+Known gaps carried into the next milestone:
+- Full pytest green-suite blocked by Windows temp-dir cleanup permissions (production code unaffected)
+- Stale pre-Phase-12 TwiBot artifacts at repo root (superseded by Phase 12 artifacts)
 
 ## Next Milestone Goals
 
-- Regenerate TwiBot comparison evidence and confirm whether recalibration materially improves transfer quality
-- Decide whether the next step is better zero-shot robustness, a supervised TwiBot baseline, or a broader Stage 2/Stage 3 domain adaptation effort
-- Tighten planning/state hygiene so requirements and verification stay current during execution rather than only at closeout
-
-## Current Milestone: v1.3 Twibot System Version
-
-**Goal:** Turn the TwiBot transfer path into a reproducible, evidence-backed system version with fresh evaluation artifacts, cleaner execution flow, and an explicit versioned release record.
-
-**Target features:**
-- Reproducible TwiBot evaluation flow that can run static and recalibrated comparisons without the current temp/cache friction
-- Fresh live artifacts for TwiBot metrics, comparison outputs, and the final cross-dataset table
-- Explicit system-version documentation describing the chosen model artifact, commands, outputs, and remaining caveats
+- Decide next direction: supervised TwiBot baseline, Twitter-native Stage 2/Stage 3 redesign, or multi-seed ablation stability
+- Improve zero-shot transfer quality or establish a supervised comparison baseline
+- Run a milestone audit before close next time
 
 ## Core Value
 
@@ -59,11 +54,13 @@ The cascade must produce a single, well-calibrated bot probability per account w
 - Behavioral and cross-message similarity features added to Stage 2a - v1.1
 - Paper ablation tables generated from the clean feature set - v1.1
 - Reproducible TwiBot evaluation flow with output_dir routing, stable artifact filenames, documented canonical command, and TWIBOT_COMPARISON_PATH env-var override - v1.3 Phase 11
+- Fresh live TwiBot evidence generated: static F1=0.0/AUC=0.5964, recalibrated F1=0.0/AUC=0.5879, verdict=no_material_change - v1.3 Phase 12
+- Table 5 cross-dataset LaTeX regenerated from live Phase 12 artifacts with TABLE5_OUTPUT_PATH and TABLE5_INTERPRETATION_PATH env-var overrides - v1.3 Phase 12
+- VERSION.md release contract at project root naming model artifact, evaluation modes, output files, live verdict, and env-var overrides - v1.3 Phase 13
+- README.md reproduction guide with numbered commands, environment assumptions, known caveats, and known limitations - v1.3 Phase 13
 
 ### Active
 
-- Generate fresh static-vs-recalibrated evidence and final paper outputs from live runs
-- Publish the chosen TwiBot system version and its execution/documentation contract
 - Multi-seed ablation stability for paper confidence intervals
 - CalibratedClassifierCV on a held-out calibration subset
 - True AMR graph parsing replacing the current embedding stub
@@ -111,6 +108,8 @@ The cascade must produce a single, well-calibrated bot probability per account w
 | Phase 10 before/after semantics changed during execution | The live comparison now means static thresholds vs online recalibration on the revised adapter, not a return to the deprecated demographic-proxy path | Adopted in v1.2 |
 | Windows temp friction is pytest-level, not production | grep confirmed zero tempfile/gettempdir usage in production code; friction is pytest tmp_path cleanup permissions only | Confirmed Phase 11 |
 | output_dir parameter added to evaluate_twibot20.py __main__ | Artifacts route through os.path.join(output_dir, ...) with os.makedirs; backward-compatible default is cwd | Adopted v1.3 Phase 11 |
+| TwiBot zero-shot F1=0.0 is documented as the v1.3 release state, not a bug | Predictions cluster near the 0.5 threshold; precision and recall collapse — a transfer-regime artifact | Adopted v1.3 Phase 13 |
+| VERSION.md is the single source of release-contract truth | README links to it; avoids duplication between reproduction guide and artifact contract | Adopted v1.3 Phase 13 |
 
 ---
-*Last updated: 2026-04-18 after Phase 11 (Reproducible TwiBot Evaluation Flow)*
+*Last updated: 2026-04-18 after v1.3 milestone close (Twibot System Version)*

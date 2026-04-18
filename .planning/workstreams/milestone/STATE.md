@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: TwiBot-20 Cross-Domain Transfer
+milestone: v1.3
+milestone_name: Twibot System Version
 status: in_progress
-stopped_at: "Phase 9 context gathered — sliding-window online threshold recalibration; ready for planning"
-last_updated: "2026-04-17T21:30:00.000Z"
-last_activity: 2026-04-17
+stopped_at: "Phase 13 complete — VERSION.md and README.md authored; v1.3 ready to close"
+last_updated: "2026-04-18T17:00:00.000Z"
+last_activity: 2026-04-18
 progress:
   total_phases: 3
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 33
+  completed_phases: 3
+  total_plans: 6
+  completed_plans: 6
+  percent: 100
 ---
 
 # Project State
@@ -21,25 +21,25 @@ progress:
 See: `.planning/PROJECT.md` and `.planning/workstreams/milestone/ROADMAP.md`
 
 **Core value:** The cascade must produce a single, well-calibrated bot probability per account while routing efficiently through stages and remaining interpretable when transferred out of domain.
-**Current focus:** Phase 8 transfer adapter stabilization and verification
+**Current focus:** Phase 13 packaging and release documentation
 
 ## Current Position
 
-Phase: 08 - Behavioral Tweet Parser and Transfer Adapter Stabilization
-Plan: 2/2 complete
-Status: Complete
-Last activity: 2026-04-17 - Phase 8 verified: 101 tests pass, behavioral adapter stable
+Phase: 13 - System Version Packaging and Release Docs
+Plan: 13-02 complete
+Status: Complete — all 3 phases done, milestone ready to close
+Last activity: 2026-04-18 - VERSION.md and README.md authored; all Phase 13 plans complete
 
-Progress: Phase 8 complete. Behavioral tweet parser (parse_tweet_types) and revised Stage 1 adapter verified. 101 tests pass. Ready for Phase 9 (sliding-window recalibration).
+Progress: All 3 v1.3 phases complete (6/6 plans). VERSION.md names the v1.3 release contract. README.md has end-to-end reproduction guide, caveats, and limitations. v1.3 milestone is ready to close.
 
 ## Performance Metrics
 
 **Latest transfer check:**
 
-- Saved TwiBot evaluation predicts only 1 bot out of 1183 accounts at threshold 0.5
-- `F1 = 0.0`
-- `AUC = 0.4674`
-- Stage 3 usage is near zero despite graph coverage
+- Fresh Phase 12 static run: `F1 = 0.0`, `AUC = 0.5964`
+- Fresh Phase 12 recalibrated run: `F1 = 0.0`, `AUC = 0.5879`
+- Fresh interpretation: `no_material_change`
+- Recalibration increased Stage 3 usage substantially on TwiBot, but did not improve F1 and slightly reduced AUC in the fresh run
 
 ## Accumulated Context
 
@@ -52,22 +52,26 @@ Recent decisions affecting current work:
 - [2026-04-17] `comment_num_1` may be reassigned away from RT count if non-RT or non-MT tweets better capture authored contribution
 - [2026-04-17] Missingness-aware handling is allowed for systematically absent TwiBot fields, especially timestamp-derived Stage 2 features
 - [2026-04-17] Full Twitter-native redesign and any TwiBot retraining remain out of scope for v1.2
+- [2026-04-17] Phase 9 recalibration updates only novelty thresholds: `n1_max_for_exit`, `n2_trigger`, and `novelty_force_stage3`
 
-### Pending Todos
+### Deferred Items
 
-- Rewrite the TwiBot transfer adapter under the revised Phase 8 scope
-- Decide and implement the missingness strategy for timestamp-derived Stage 2 features
-- Re-run TwiBot evaluation and compare against the saved collapsed baseline
-- Update Phase 8 verification artifacts after the revised run
+Current deferred items:
+
+| Category | Item | Status |
+|----------|------|--------|
+| verification | full pytest/runtime verification in a cleaner environment | pending |
+| planning | v1.2 milestone audit | deferred carry-over |
+| planning | stale Phase 8 verification artifact reconciliation if needed | deferred carry-over |
 
 ### Blockers/Concerns
 
-- Current TwiBot zero-shot results are not acceptable under the saved adapter
-- The old workstream state had become stale and understated completed implementation work
-- Verification inside this environment may still be partially affected by Windows temp or process-permission issues
+- Verification inside this environment is still partially affected by Windows temp and cache-permission issues
+- Phase 13 should package the live Phase 12 artifacts rather than the older root-level TwiBot outputs
+- The fresh evidence shows recalibration changes routing behavior but not final F1, which should be called out explicitly in release docs
 
 ## Session Continuity
 
-Last session: 2026-04-17
-Stopped at: Phase 8 scope revision complete; ready for revised execution planning or direct implementation
+Last session: 2026-04-18
+Stopped at: Phase 12 completed with fresh artifacts; next clean step is `$gsd-plan-phase 13`
 Resume file: None

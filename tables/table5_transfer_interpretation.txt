@@ -1,0 +1,4 @@
+Transfer result: no_material_change.
+Primary basis: F1 delta = +0.0000 (static 0.0000 -> recalibrated 0.0000).
+AUC delta = -0.0085, precision delta = +0.0000, recall delta = +0.0000.
+Source artifact: test.json.

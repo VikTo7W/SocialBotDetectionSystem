@@ -1,0 +1,26 @@
+{
+  "path": "test.json",
+  "model_path": "trained_system_v12.joblib",
+  "threshold": 0.5,
+  "window_size": 100,
+  "static_overall": {
+    "f1": 0.0,
+    "auc": 0.5964203499079189,
+    "precision": 0.0,
+    "recall": 0.0
+  },
+  "recalibrated_overall": {
+    "f1": 0.0,
+    "auc": 0.5878942219152855,
+    "precision": 0.0,
+    "recall": 0.0
+  },
+  "delta_overall": {
+    "f1": 0.0,
+    "auc": -0.008526127992633414,
+    "precision": 0.0,
+    "recall": 0.0
+  },
+  "interpretation": "no_material_change",
+  "interpretation_basis": "f1_delta"
+}
