@@ -1,389 +1,542 @@
-# Architecture: TwiBot-20 Cross-Dataset Loader Integration
+# Architecture: Twitter-Native TwiBot-20 Cascade (v1.4)
 
-**Domain:** Cross-dataset evaluation — TwiBot-20 (Twitter) loader for a BotSim-24-trained Reddit cascade
-**Researched:** 2026-04-16
-**Milestone:** v1.2 TwiBot-20 Cross-Dataset Evaluation
-**Confidence:** HIGH (codebase verified; TwiBot-20 format from training knowledge, confidence MEDIUM for
-              exact field names — flag for verification when actual files are in hand)
-
----
-
-## The Integration Contract
-
-The cascade pipeline has one intake boundary: `build_account_table()`. It returns a DataFrame whose columns
-are consumed directly by `extract_stage1_matrix()` and `extract_stage2_features()`. Everything downstream
-(stages, gates, meta-learners) is format-agnostic beyond that boundary.
-
-**Goal:** produce a `build_twibot20_account_table()` whose output is structurally identical to
-`build_account_table()` output. Once that contract is satisfied, `predict_system()` and `evaluate_s3()`
-run unchanged.
+**Domain:** Supervised cascade training on TwiBot-20 — Twitter-native feature extraction and a second TrainedSystem artifact
+**Researched:** 2026-04-18
+**Milestone:** v1.4 Twitter-Native Supervised Baseline
+**Supersedes:** v1.2 ARCHITECTURE.md (zero-shot Reddit cascade on TwiBot-20)
+**Confidence:** HIGH (all integration points verified against live codebase)
 
 ---
 
-## Internal Account Format (the target)
+## Context: What Changed from v1.2 to v1.4
 
-The following columns are the exact contract that all feature extractors expect. Every column must be
-present with compatible dtype.
+v1.2 architecture solved: "how do we run the Reddit-trained cascade on TwiBot-20 zero-shot?"
+Answer: monkey-patch `extract_stage1_matrix` to clamp ratios; tolerate missingness in Stage 2 timestamps.
 
-| Column | Dtype | Source in BotSim-24 | Notes |
-|--------|-------|---------------------|-------|
-| `account_id` | str | `Users.csv:user_id` | Used only for join and output; no stage extracts from it |
-| `label` | int (0/1) | row-order rule in Users.csv | 0 = human, 1 = bot |
-| `username` | str | `Users.csv:name` | Length used in Stage 1 (`extract_stage1_matrix:name_len`) |
-| `profile` | str | `Users.csv:description` | NOT used by any feature extractor (dropped after v1.1 leakage fix); keep for schema parity |
-| `subreddit_list` | list[str] | `Users.csv:subreddit` | Length → `sr_num` in Stage 1 |
-| `submission_num` | float32 | `Users.csv:submission_num` | Stage 1 feature |
-| `comment_num` | float32 | `Users.csv:comment_num` | Stage 1 feature |
-| `comment_num_1` | float32 | `Users.csv:comment_num_1` | Stage 1 feature |
-| `comment_num_2` | float32 | `Users.csv:comment_num_2` | Stage 1 feature |
-| `messages` | list[dict] | `user_post_comment.json` | Entire Stage 2 input |
-| `node_idx` | int32 | assigned by `main.py` after build | Stage 3 edge lookup; must be integer index into edges arrays |
+v1.4 architecture solves: "how do we train a *new* cascade natively on TwiBot-20 with no Reddit
+mappings, no imputing, and no zero-fill — and keep the Reddit cascade completely untouched?"
 
-Each message dict in `messages` must contain:
-
-| Key | Dtype | Required by Stage 2 |
-|-----|-------|---------------------|
-| `text` | str | Embedding and linguistic features |
-| `ts` | float or None | Temporal features (rate, deltas, hour entropy) |
-| `kind` | str | Not currently extracted; carry anyway for debugging |
-| any extra keys | — | Ignored by extractors |
+The architectural implication is a second *training path*, not just a second evaluation path.
 
 ---
 
-## TwiBot-20 Source Format (what the loader receives)
+## The Integration Contract (Unchanged Core)
 
-TwiBot-20 ships three files:
+`TrainedSystem` is the universal container. Any cascade — Reddit-trained or TwiBot-trained — is a
+`TrainedSystem` object. `predict_system()` and `evaluate_s3()` accept any `TrainedSystem` paired
+with a compatible DataFrame. The challenge is producing that compatible DataFrame using only
+Twitter-native fields — not re-using the Reddit column schema.
 
-**`user.json`** — list of user objects. Each object contains:
-- `id` — Twitter user ID string (maps to account_id)
-- `name` — display name (maps to username)
-- `screen_name` — handle (@username)
-- `description` — bio text (maps to profile; not used after v1.1)
-- `followers_count`, `friends_count` (following), `listed_count`, `favourites_count`,
-  `statuses_count` — numeric activity counts
-- `created_at` — ISO-8601 or Twitter date string
-- `tweet` — list of tweet objects embedded in the user record (the main content source)
-  - each tweet: `id_str`, `full_text` or `text`, `created_at`, `retweet_count`, `favorite_count`
+The key insight: `train_system()` in `botdetector_pipeline.py` takes:
 
-**`edge.csv`** — CSV with columns (order may vary, check header):
-- `source_id` — follower user ID
-- `target_id` — followee user ID
-- (no weight or type column by default — all edges are follow-relationship, single type)
+```
+S1: pd.DataFrame  —  stage model training split
+S2: pd.DataFrame  —  meta-learner training split (OOF stacking)
+edges_S1, edges_S2: pd.DataFrame  —  intra-split edge subsets
+cfg: FeatureConfig
+th: StageThresholds
+```
 
-**`label.csv`** — CSV with columns:
-- `id` — user ID
-- `label` — "bot" or "human" string (must be mapped to int 1/0)
+It calls `extract_stage1_matrix(S1)`, `extract_stage2_features(S1, embedder)`, and
+`build_graph_features_nodeidx(S1, edges_S1, nodes_total)` internally. If those three feature
+functions accept TwiBot-20 DataFrames and return the same array shapes as before, `train_system()`
+runs unchanged.
 
----
-
-## Feature Gap Analysis: TwiBot-20 → BotSim-24 Contract
-
-### Stage 1 (`extract_stage1_matrix`)
-
-| BotSim-24 field | TwiBot-20 mapping | Gap? |
-|-----------------|------------------|------|
-| `username` (length) | `name` or `screen_name` in user.json | None — direct map |
-| `submission_num` | `statuses_count` (total tweets ever) | Approximate — statuses_count includes all tweets, not just original posts |
-| `comment_num_1` | No direct equivalent | Set to 0.0 — replies are not separated from tweets in TwiBot-20 |
-| `comment_num_2` | No direct equivalent | Set to 0.0 |
-| `comment_num` | 0.0 (same reason) | Approximation accepted for zero-shot |
-| `subreddit_list` (length) | Not applicable — Twitter has no subreddits | Set to empty list `[]`; sr_num will be 0 |
-
-The Stage 1 model was trained on BotSim-24 distributions. Zero-valued comment counts and subreddit count
-will create OOD inputs — the Mahalanobis novelty scorer will register high novelty for most TwiBot-20
-accounts. This is expected and correct: novelty forces cascade escalation, which is the right behavior
-for OOD inputs.
-
-### Stage 2 (`extract_stage2_features`)
-
-| BotSim-24 source | TwiBot-20 mapping | Gap? |
-|-----------------|------------------|------|
-| `messages[].text` (posts/comments) | tweet `full_text` or `text` | None — direct map |
-| `messages[].ts` (Unix seconds) | tweet `created_at` (Twitter date string) | Parse required — convert Twitter date format to Unix seconds |
-| `messages[].kind` | "tweet" | None — kind is not extracted |
-| Score/upvote_ratio/num_comments | `retweet_count`, `favorite_count` in tweet | Carried in message dict; not currently extracted by features_stage2.py |
-
-Content signal is structurally equivalent: both are free-text posts with timestamps. Stage 2 should
-generalize reasonably — content style (repetition, temporal patterns) transfers across platforms.
-
-### Stage 3 (`build_graph_features_nodeidx`)
-
-| BotSim-24 source | TwiBot-20 mapping | Gap? |
-|-----------------|------------------|------|
-| `edge_index.pt` shape [E,2] | `edge.csv` columns source_id, target_id | Format conversion required |
-| `edge_type.pt` values 0/1/2 | Only follow edges — single type | All edges get etype=0 |
-| `edge_weight.pt` continuous weight | No weight in edge.csv | Default weight=1.0 for all edges |
-| node integer indices | Must be created from ID-to-index mapping | No gap in logic; requires explicit index assignment |
-
-Stage 3 graph features (per-type degree, weighted degree) were trained on BotSim-24 edge semantics
-(3 edge types, continuous weights). On TwiBot-20 (single type, binary weight), all per-type[1] and
-per-type[2] features will be zero, and weighted degrees equal unweighted degrees. The trained Stage 3
-model will be OOD on this input. Mahalanobis novelty will flag this — Stage 3 will either not contribute
-or contribute noise. The zero-shot expectation is that Stage 3 degrades; this should be reported as-is
-in the paper as a cross-platform generalization finding.
+Therefore: the architecture for v1.4 is entirely about building three Twitter-native feature
+extractors and a new training entry point. Every inference and evaluation component is reused as-is.
 
 ---
 
-## New Components Required
+## Component Map: New vs Reused vs Modified
 
-### 1. `twibot20_io.py` — New file (mirrors `botsim24_io.py`)
+### New Components (must be built)
 
-This file is the only new module. It must implement:
+| Component | File | Purpose |
+|-----------|------|---------|
+| Twitter-native Stage 1 extractor | `features_stage1_twitter.py` | Replaces Reddit column schema with Twitter-native account metadata |
+| Twitter-native Stage 2 extractor | `features_stage2_twitter.py` | Tweet timelines without Reddit temporal assumptions; no timestamp sentinel fallback |
+| Twitter-native Stage 3 extractor | No new file needed — see graph section below | Graph features are already format-agnostic via `build_graph_features_nodeidx` |
+| TwiBot-20 training entry point | `train_twibot20.py` | Drives train/val/test split of TwiBot-20 train.json, trains cascade, saves artifact |
+| TwiBot-20 native evaluation | `evaluate_twibot20_native.py` | Runs the TwiBot-native `TrainedSystem` on TwiBot-20 test.json |
+
+### Reused Without Modification
+
+| Component | File | Why Reusable |
+|-----------|------|-------------|
+| `train_system()` | `botdetector_pipeline.py` | Accepts any DataFrames + feature arrays; platform-agnostic after features are extracted |
+| `predict_system()` | `botdetector_pipeline.py` | Same as above — only reads `TrainedSystem` fields and calls feature extractors |
+| `TrainedSystem` dataclass | `botdetector_pipeline.py` | Universal cascade container; no platform-specific fields |
+| `StageThresholds` | `botdetector_pipeline.py` | Threshold values have no platform semantics |
+| `MahalanobisNovelty` | `botdetector_pipeline.py` | Fit on Twitter-native features; same math |
+| `Stage1MetadataModel`, `Stage2BaseContentModel`, `Stage3StructuralModel` | `botdetector_pipeline.py` | Same LightGBM + CalibratedClassifierCV pattern; platform-agnostic |
+| `AMRDeltaRefiner`, `Stage2LSTMRefiner` | `botdetector_pipeline.py` | Take embedding arrays — platform-agnostic |
+| `gate_amr()`, `gate_stage3()` | `botdetector_pipeline.py` | Operate on probability/novelty scores — platform-agnostic |
+| `oof_meta12_predictions()` | `botdetector_pipeline.py` | Pure numpy — platform-agnostic |
+| `build_graph_features_nodeidx()` | `botdetector_pipeline.py` | Takes `{src, dst, etype, weight}` DataFrame — already platform-agnostic |
+| `evaluate_s3()` | `evaluate.py` | Operates on `predict_system()` output — platform-agnostic |
+| `calibrate_thresholds()` | `calibrate.py` | Operates on `TrainedSystem` + S2 DataFrame — platform-agnostic |
+| `twibot20_io.load_accounts()` | `twibot20_io.py` | Already loads TwiBot-20 JSON; returns `messages` list |
+| `twibot20_io.build_edges()` | `twibot20_io.py` | Already builds `{src, dst, etype, weight}` edge DataFrame |
+| `twibot20_io.parse_tweet_types()` | `twibot20_io.py` | RT/MT/original classification; will be used in native Stage 1 |
+| `TextEmbedder` | `botdetector_pipeline.py` | Wraps sentence-transformers — text-input, platform-agnostic |
+
+### Modified
+
+| Component | File | Change |
+|-----------|------|--------|
+| `main.py` | `main.py` | Remove online novelty recalibration path (v1.4 requirement); Reddit cascade training unchanged |
+| `ablation_tables.py` | `ablation_tables.py` | Add a comparison table function: Reddit-trained-on-TwiBot (F1=0.0) vs TwiBot-trained-on-TwiBot |
+
+### Must NOT Be Touched
+
+| Component | Constraint |
+|-----------|-----------|
+| `trained_system_v12.joblib` | Immutable artifact — the Reddit-trained cascade |
+| `features_stage1.py` | Reddit-native extractor; do not add Twitter branches here |
+| `features_stage2.py` | Reddit-native extractor; same constraint |
+| `evaluate_twibot20.py` | Zero-shot evaluation script for Reddit cascade; frozen at v1.3 |
+| All existing v1.3 artifacts in `.planning/workstreams/milestone/phases/12-*` | Paper evidence artifacts |
+
+---
+
+## Twitter-Native Feature Design
+
+### Stage 1: Account Metadata (`features_stage1_twitter.py`)
+
+The Reddit Stage 1 extractor (`features_stage1.py`) uses these columns:
+`username`, `submission_num`, `comment_num_1`, `comment_num_2`, `subreddit_list`
+
+These are Reddit-specific proxies. The TwiBot-20 loader in `twibot20_io.py` already populates
+genuine Twitter equivalents in `load_accounts()`:
+
+| TwiBot-20 field | Semantics | Stage 1 feature |
+|-----------------|-----------|-----------------|
+| `screen_name` | Twitter handle | `name_len` (len of screen_name) |
+| `statuses_count` | Total tweets published (API-capped at 3200) | `tweet_count` |
+| `followers_count` | Follower count | `followers_count` |
+| `friends_count` | Following count | `friends_count` |
+| `followers_count / (friends_count + eps)` | Follow ratio | `follow_ratio` |
+| tweet parse: RT count | From `parse_tweet_types()` via messages | `rt_count` |
+| tweet parse: MT count | From `parse_tweet_types()` | `mt_count` |
+| tweet parse: original count | From `parse_tweet_types()` | `orig_count` |
+| `rt_count / (total_tweets + eps)` | RT fraction | `rt_frac` |
+| `orig_count / (total_tweets + eps)` | Original content fraction | `orig_frac` |
+| `len(domain_list)` | Number of topical domains | `domain_count` |
+
+Do NOT import `features_stage1.py` or re-use any of its logic. Build a standalone function:
 
 ```python
-def _parse_twitter_date(dt_str: str) -> Optional[float]:
-    """Parse Twitter's 'Thu Oct 08 12:34:56 +0000 2020' format to Unix seconds."""
-
-def load_twibot20_users(path: str) -> List[Dict]:
-    """Load user.json — returns raw list of user objects."""
-
-def load_twibot20_labels(path: str) -> Dict[str, int]:
-    """Load label.csv — returns {user_id: 0/1} mapping."""
-
-def load_twibot20_edges(path: str) -> pd.DataFrame:
-    """Load edge.csv — returns DataFrame with columns: src, dst, etype, weight.
-    All edges: etype=0, weight=1.0. src/dst are integer node indices
-    (requires the id-to-index map produced by build_twibot20_account_table)."""
-
-def build_twibot20_account_table(
-    users: List[Dict],
-    labels: Dict[str, int],
-    max_tweets: int = 200,
-) -> pd.DataFrame:
+# features_stage1_twitter.py
+def extract_stage1_matrix_twitter(df: pd.DataFrame) -> np.ndarray:
     """
-    Converts TwiBot-20 user.json + label.csv into the internal account format.
-    Output columns match build_account_table() exactly:
-      account_id, label, username, profile, subreddit_list,
-      submission_num, comment_num, comment_num_1, comment_num_2, messages
-    node_idx is NOT assigned here — assigned by evaluate_twibot20.py after the call.
+    Stage 1 features from TwiBot-20 account metadata.
+    Input df must have columns produced by twibot20_io.load_accounts():
+      screen_name, statuses_count, followers_count, friends_count,
+      messages (list of dicts), domain_list (list of str).
+    Returns ndarray shape (N, 11) — all float32.
     """
 ```
 
-`load_twibot20_edges` depends on the id-to-index map, so it must be called after
-`build_twibot20_account_table`. The call sequence in the evaluation script is:
+The output column count (11) is an example; the exact count does not need to match Reddit Stage 1's
+10 columns. `train_system()` passes arrays to `Stage1MetadataModel.fit()` which is size-agnostic.
+`MahalanobisNovelty.fit()` is also size-agnostic. The only constraint is that train-time and
+inference-time feature extractors produce identically-shaped arrays for the same split — which is
+guaranteed by calling the same function in both places.
+
+The function must call `parse_tweet_types()` from `twibot20_io` to obtain RT/MT/original breakdown,
+since `messages` is a list of dicts with `{"text": str, "ts": None, "kind": "tweet"}` — not raw
+text strings.
+
+### Stage 2: Tweet Content and Temporal (`features_stage2_twitter.py`)
+
+The Reddit Stage 2 extractor (`features_stage2.py`) is structurally reusable because it reads
+`messages[].text` and `messages[].ts`. TwiBot-20's `messages` already has this exact shape from
+`twibot20_io.load_accounts()`.
+
+However, two Reddit-specific assumptions must be replaced:
+
+1. **Timestamp sentinel**: `features_stage2.py` uses `_MISSING_TEMPORAL_SENTINEL = -1.0` when
+   tweets exist but all timestamps are None. In TwiBot-20, timestamps in `messages[].ts` are always
+   `None` (the loader sets `"ts": None` unconditionally). This is a systematic difference, not
+   missing data: TwiBot-20 simply does not expose tweet timestamps in the native JSON. The Twitter-
+   native Stage 2 extractor must handle this cleanly — compute content/linguistic features only
+   (embedding pool, linguistic aggregate, cross-message similarity), set temporal features to 0.0
+   explicitly (not the sentinel), and omit timestamp-derived features entirely from the output vector.
+   This is correct because the novelty scorer (Mahalanobis) is fit on the training set, which has
+   the same zero-temporal structure — so it is not OOD for this model.
+
+2. **No sentinel cross-contamination**: the sentinel values from `features_stage2.py` (-1.0 for
+   temporal features) will confuse a model trained natively on TwiBot-20. Do not import or reuse
+   `_MISSING_TEMPORAL_SENTINEL` from `features_stage2.py`.
+
+Recommended output vector for Twitter Stage 2 (per account):
 
 ```
-accounts_tb20 = build_twibot20_account_table(users, labels)
-accounts_tb20["node_idx"] = np.arange(len(accounts_tb20), dtype=np.int32)
-id_to_idx = dict(zip(accounts_tb20["account_id"], accounts_tb20["node_idx"]))
-edges_tb20 = load_twibot20_edges("edge.csv", id_to_idx)
+[embedding_pool (384-d), ling_pool (4-d), cross_msg_sim_mean (1), near_dup_frac (1)]
+= 390 dimensions
 ```
 
-### 2. `evaluate_twibot20.py` — New evaluation entry point script
+Temporal features are omitted because they are never available in TwiBot-20. This is a deliberate
+design choice, not a workaround — the paper should report the feature set explicitly.
 
-A new top-level script (not a function in an existing module) that:
+```python
+# features_stage2_twitter.py
+def extract_stage2_features_twitter(df: pd.DataFrame, embedder, max_msgs: int = 50, max_chars: int = 500) -> np.ndarray:
+    """
+    Stage 2 features from TwiBot-20 tweet timelines.
+    Uses df['messages'] list of dicts with 'text' key.
+    Timestamps are not present in TwiBot-20 — temporal features are omitted.
+    Output shape: (N, 390) — float32.
+    """
+```
 
-1. Loads `trained_system_v12.joblib` — zero-shot, no retraining
-2. Calls `twibot20_io` to build the account table and edges DataFrame
-3. Calls `predict_system(sys, accounts_tb20, edges_tb20, nodes_total=len(accounts_tb20))`
-4. Calls `evaluate_s3(results, y_true)` — reused unchanged
-5. Calls `generate_cross_dataset_table(results_botsim, results_twibot)` — new function (see below)
+### Stage 3: Graph Structure (no new file required)
 
-This script is separate from `main.py` to preserve the existing BotSim-24 training pipeline untouched.
+`build_graph_features_nodeidx()` already accepts `{src, dst, etype, weight}` DataFrames and is
+platform-agnostic. `twibot20_io.build_edges()` already produces this exact format (etype=0 for
+following, etype=1 for follower, weight=log1p(1.0)). No new graph feature extractor is needed.
 
-### 3. Cross-dataset LaTeX table (in `ablation_tables.py` or new `cross_dataset_tables.py`)
-
-A single new function `generate_cross_dataset_table(botsim_metrics, twibot_metrics)` that produces:
-
-| Dataset | F1 | AUC | Precision | Recall | Stage 1 exit % | AMR trigger % | Stage 3 exit % |
-|---------|----|-----|-----------|--------|----------------|---------------|----------------|
-| BotSim-24 (S3) | — | — | — | — | — | — | — |
-| TwiBot-20 (zero-shot) | — | — | — | — | — | — | — |
-
-This can go in `ablation_tables.py` as an additional function, or in a separate `cross_dataset_tables.py`
-if the file is already large. Preference: add to `ablation_tables.py` to keep table generation centralized.
+Two edge types (following=0, follower=1) are already separated in `build_edges()`, unlike the v1.2
+zero-shot path which used only etype=0. The TwiBot-native cascade will have real per-type degree
+features for both following and follower edges. Per-type[2] features (etype=2) will be zero — this
+is not a problem since the Stage 3 model is trained on this same structure.
 
 ---
 
-## Existing Components: No Modification Required
+## TwiBot-20 Train/Val/Test Split
 
-| Component | Status | Rationale |
-|-----------|--------|-----------|
-| `botdetector_pipeline.py:predict_system` | Unchanged | Accepts any DataFrame + edges_df matching internal format |
-| `botdetector_pipeline.py:build_graph_features_nodeidx` | Unchanged | Works on integer node indices — format-agnostic |
-| `botdetector_pipeline.py:extract_amr_embeddings_for_accounts` | Unchanged | Operates on `messages[-1].text` — same in TwiBot-20 |
-| `features_stage1.py:extract_stage1_matrix` | Unchanged | Reads named columns; zero-filled gaps return zeros gracefully |
-| `features_stage2.py:extract_stage2_features` | Unchanged | Reads `messages[].text` and `messages[].ts` — same contract |
-| `evaluate.py:evaluate_s3` | Unchanged | Operates on `predict_system()` output DataFrame — format-agnostic |
-| `botsim24_io.py` | Unchanged | BotSim-24 pipeline untouched |
-| `main.py` | Unchanged | Training pipeline untouched |
-| `trained_system_v12.joblib` | Unchanged | Zero-shot: load and run, no retrain |
+TwiBot-20 ships canonical splits: `train.json`, `val.json`, `test.json`. For the supervised
+baseline:
+
+- **Stage model training (S1):** subset of `train.json`
+- **Meta-learner OOF training (S2):** separate subset of `train.json`
+- **Threshold calibration:** `val.json` (the canonical validation split)
+- **Final evaluation (S3):** `test.json` (held out until final metrics)
+
+Recommended split of `train.json`:
+
+```
+train.json  →  stratified 80/20 split  →  S1 (80%)  +  S2 (20%)
+val.json    →  calibrate_thresholds()
+test.json   →  final evaluate_s3()
+```
+
+This mirrors the Reddit cascade's S1/S2/S3 discipline. Using the canonical `val.json` for threshold
+calibration instead of another `train.json` slice has two advantages: (1) it respects the original
+split boundaries, preventing any possibility of leakage between calibration and test sets; (2) it
+keeps the evaluation setup comparable to published TwiBot-20 baselines that use the same split.
+
+OOF stacking discipline for meta-learners:
+- `oof_meta12_predictions()` runs 5-fold CV entirely within S2 (the 20% slice of `train.json`)
+- The final `meta12` and `meta123` are trained on all of S2
+- Threshold calibration runs on `val.json` (never on S2 or test.json)
+- `evaluate_s3()` runs on `test.json`
+
+This is the same OOF stacking regime as the Reddit cascade. No changes to `oof_meta12_predictions()`
+or `calibrate_thresholds()` are needed.
 
 ---
 
-## Data Flow: TwiBot-20 Evaluation Path
+## Data Flow: TwiBot-20 Native Training Path
 
 ```
 TwiBot-20 files on disk
-  user.json  edge.csv  label.csv
+  train.json   val.json   test.json
         |
         v
-twibot20_io.py
-  load_twibot20_users(user.json)       -> raw user list
-  load_twibot20_labels(label.csv)      -> {id: 0/1}
-  build_twibot20_account_table(...)    -> accounts_tb20 DataFrame
+twibot20_io.load_accounts(train.json)    ->  train_df  (N_train accounts)
+twibot20_io.build_edges(train_df, train.json)  ->  train_edges_df
         |
-        | (assign node_idx = arange)
-        | (build id_to_idx map)
+        | stratified 80/20 split (SEED=42)
         v
-  load_twibot20_edges(edge.csv, id_to_idx)  -> edges_tb20 DataFrame
+  S1 (80% of train_df)   S2 (20% of train_df)
+  edges_S1 (intra-S1)    edges_S2 (intra-S2)
         |
         v
-evaluate_twibot20.py
-  joblib.load("trained_system_v12.joblib")  -> sys (TrainedSystem)
-        |
-        v
-predict_system(sys, accounts_tb20, edges_tb20, nodes_total)
-  |-- Stage 1: extract_stage1_matrix(accounts_tb20)
-  |     [submission_num=statuses_count, comment_num*=0.0, sr_num=0 -> high novelty expected]
-  |-- Stage 2: extract_stage2_features(accounts_tb20, sys.embedder)
-  |     [messages from tweets - structurally equivalent]
-  |-- Stage 2b AMR: extract_amr_embeddings_for_accounts(...)
-  |     [uses messages[-1].text - same contract]
-  |-- Stage 3: build_graph_features_nodeidx(accounts_tb20, edges_tb20, nodes_total)
-  |     [single etype=0, weight=1.0 -> per-type[1,2] features all zero -> OOD, high novelty]
+train_system(S1, S2, edges_S1, edges_S2, ...)
+  |-- Stage 1:  extract_stage1_matrix_twitter(S1)      [features_stage1_twitter.py]
+  |-- Stage 2a: extract_stage2_features_twitter(S1, embedder) [features_stage2_twitter.py]
+  |-- Stage 2b: extract_amr_embeddings_for_accounts(S1, ...)  [botdetector_pipeline.py — unchanged]
+  |-- Stage 3:  build_graph_features_nodeidx(S1, edges_S1, nodes_total) [botdetector_pipeline.py — unchanged]
+  |-- OOF meta12 on S2
+  |-- meta123 training on S2
   v
-results DataFrame (p1, p2, p12, p3, p_final, amr_used, stage3_used, ...)
+TrainedSystem (TwiBot-native)
         |
         v
-evaluate_s3(results, y_true)           -> metrics dict (F1, AUC, precision, recall, routing stats)
+calibrate_thresholds(system, val_df, val_edges_df, ...)  [calibrate.py — unchanged]
         |
         v
-generate_cross_dataset_table(botsim_metrics, twibot_metrics)  -> LaTeX string
+predict_system(system, test_df, test_edges_df, ...)  [botdetector_pipeline.py — unchanged]
+        |
+        v
+evaluate_s3(results, y_true)  [evaluate.py — unchanged]
+        |
+        v
+joblib.dump(system, "trained_system_twibot20.joblib")
 ```
 
----
+The three injections of Twitter-native feature extractors happen inside `train_system()`, which calls:
+- `extract_stage1_matrix(S1)` — need to make this call use the Twitter extractor
+- `extract_stage2_features(S2, embedder)` — same
 
-## Stage 3 Graph Handling: edge.csv vs PyTorch Tensors
+This is the only structural tension: `train_system()` currently imports `extract_stage1_matrix`
+from `features_stage1` and `extract_stage2_features` from `features_stage2` via module-level imports
+in `botdetector_pipeline.py`.
 
-BotSim-24 stores edges as three `.pt` tensors (`edge_index.pt`, `edge_type.pt`, `edge_weight.pt`)
-loaded in `main.py` and converted to a `pd.DataFrame` with columns `{src, dst, etype, weight}`.
-`build_graph_features_nodeidx` operates on that DataFrame — it never touches `.pt` files directly.
+**Resolution:** `train_twibot20.py` passes the Twitter-native extractor functions as arguments to
+`train_system()`, OR it monkey-patches `botdetector_pipeline.extract_stage1_matrix` before calling
+`train_system()` (the same pattern `evaluate_twibot20.py` already uses for `bp.extract_stage1_matrix`).
 
-TwiBot-20 ships `edge.csv`. The loader must produce the same DataFrame schema:
+The monkey-patch pattern is already established and safe (the Reddit cascade's `main.py` and
+`evaluate_twibot20.py` coexist). However, a cleaner long-term design is to accept extractor
+callables as parameters to `train_system()`. Given the v1.4 constraint of not modifying
+`botdetector_pipeline.py` significantly, the monkey-patch approach is preferred for v1.4.
+
+Concretely in `train_twibot20.py`:
 
 ```python
-# Inside load_twibot20_edges(path, id_to_idx):
-df = pd.read_csv(path)                          # columns: source_id, target_id (verify header)
-df = df[df["source_id"].isin(id_to_idx) & df["target_id"].isin(id_to_idx)]
-edges = pd.DataFrame({
-    "src":    df["source_id"].map(id_to_idx).astype(np.int32),
-    "dst":    df["target_id"].map(id_to_idx).astype(np.int32),
-    "etype":  np.zeros(len(df), dtype=np.int8),      # all follow edges = type 0
-    "weight": np.ones(len(df),  dtype=np.float32),   # no weight in TwiBot-20
-})
-return edges.dropna().reset_index(drop=True)
+import botdetector_pipeline as bp
+from features_stage1_twitter import extract_stage1_matrix_twitter
+from features_stage2_twitter import extract_stage2_features_twitter
+
+bp.extract_stage1_matrix = extract_stage1_matrix_twitter
+bp.extract_stage2_features = extract_stage2_features_twitter
+try:
+    sys = train_system(S1, S2, edges_S1, edges_S2, ...)
+finally:
+    bp.extract_stage1_matrix = _orig_s1
+    bp.extract_stage2_features = _orig_s2
 ```
 
-No change to `build_graph_features_nodeidx` is needed. The `n_types=3` parameter still iterates types
-0/1/2, but types 1 and 2 will have zero-count masks, producing all-zero feature columns for those
-positions — which is the correct representation of "no edges of this type."
+This is safe because `train_twibot20.py` is a standalone entry point that is never imported by
+`main.py` or `evaluate_twibot20.py`. The patch is scoped to the process and the try/finally block.
 
 ---
 
-## `node_idx` Assignment for TwiBot-20
+## New Entry Point: `train_twibot20.py`
 
-In BotSim-24, `node_idx` maps to positions in the `.pt` tensor arrays, which encode a global node space
-from the original graph construction. TwiBot-20 has no pre-existing global node space.
-
-Solution: assign `node_idx = np.arange(len(accounts_tb20))` sequentially after building the account
-table. Pass `nodes_total = len(accounts_tb20)` to `predict_system`. The edge loader uses the same
-id-to-index map, so src/dst indices are consistent with node_idx values.
-
-This is exactly the same pattern `main.py` uses for BotSim-24:
 ```python
-users["node_idx"] = np.arange(len(users), dtype=np.int32)
+# train_twibot20.py — new file
+"""
+Train a Twitter-native cascade on TwiBot-20 train.json.
+Evaluate on test.json. Save as trained_system_twibot20.joblib.
+
+The Reddit cascade (trained_system_v12.joblib) is never loaded or modified.
+
+Usage:
+    python train_twibot20.py <train_json> <val_json> <test_json> [output_path]
+
+Defaults:
+    train_json   = "train.json"
+    val_json     = "val.json"
+    test_json    = "test.json"
+    output_path  = "trained_system_twibot20.joblib"
+"""
+```
+
+Responsibilities:
+1. Load train.json, val.json, test.json via `twibot20_io.load_accounts()`
+2. Build edges for each split via `twibot20_io.build_edges()`
+3. Split train into S1/S2 (stratified 80/20)
+4. Intra-split edge filtering via `filter_edges_for_split()` (copy from `main.py` — do not import
+   from `main.py` to avoid triggering BotSim-24 imports)
+5. Monkey-patch `botdetector_pipeline.extract_stage1_matrix` and `extract_stage2_features`
+6. Call `train_system()`
+7. Restore original extractors
+8. Call `calibrate_thresholds()` on val split
+9. Call `predict_system()` + `evaluate_s3()` on test split
+10. Save `TrainedSystem` as `trained_system_twibot20.joblib`
+11. Save metrics to `metrics_twibot20_native.json`
+
+`filter_edges_for_split()` is currently defined locally in `main.py` (not exported). Copy the
+two-liner into `train_twibot20.py` to avoid coupling:
+
+```python
+def filter_edges_for_split(edges_df: pd.DataFrame, node_ids: np.ndarray) -> pd.DataFrame:
+    node_set = set(node_ids.tolist())
+    m = edges_df["src"].isin(node_set) & edges_df["dst"].isin(node_set)
+    return edges_df[m].reset_index(drop=True)
 ```
 
 ---
 
-## evaluate_s3() Reuse Analysis
+## New Entry Point: `evaluate_twibot20_native.py`
 
-`evaluate_s3()` takes `(results: pd.DataFrame, y_true: np.ndarray, threshold: float)`. It reads columns
-`p1, p2, p12, p_final, amr_used, stage3_used, p3, n1, n2, n3`. These are all produced by
-`predict_system()`. The function is completely dataset-agnostic.
+Separate from the existing `evaluate_twibot20.py` (which runs the Reddit cascade zero-shot).
+This file runs the TwiBot-native cascade on test.json.
 
-**Verdict: evaluate_s3() is fully reusable without modification.**
+```python
+# evaluate_twibot20_native.py — new file
+"""
+Run the TwiBot-native cascade on TwiBot-20 test.json.
+Loads trained_system_twibot20.joblib (produced by train_twibot20.py).
+Does NOT load or reference trained_system_v12.joblib.
 
-The only new evaluation code needed is `generate_cross_dataset_table()` for the side-by-side paper
-comparison. `evaluate_s3()` returns a dict; that dict is the input to the comparison function.
-
----
-
-## Build Order (considering dependencies)
-
-```
-Step 1: twibot20_io.py — no dependencies on other new code
-  - _parse_twitter_date()
-  - load_twibot20_users()
-  - load_twibot20_labels()
-  - build_twibot20_account_table()       [does NOT call load_twibot20_edges]
-  - load_twibot20_edges(path, id_to_idx) [called after account table built]
-
-Step 2: Unit tests for twibot20_io.py — independent, can proceed before Step 3
-  - Test that output columns match internal format contract exactly
-  - Test _parse_twitter_date() with known inputs
-  - Test label mapping ("bot"->1, "human"->0)
-  - Test edge ID filtering (edges referencing unknown IDs are dropped)
-
-Step 3: evaluate_twibot20.py — depends on Step 1 (twibot20_io) and trained_system_v12.joblib
-  - Load trained system
-  - Build account table and edges
-  - Call predict_system (no change)
-  - Call evaluate_s3 (no change)
-  - Print metrics
-
-Step 4: generate_cross_dataset_table() in ablation_tables.py — depends on Step 3 output format
-  - Add function to existing ablation_tables.py
-  - Input: two metrics dicts from evaluate_s3()
-  - Output: LaTeX table string
-
-Step 5: End-to-end run — depends on Steps 1-4 and actual TwiBot-20 data files on disk
-  - Run evaluate_twibot20.py
-  - Collect paper metrics
-  - Generate LaTeX table
+Usage:
+    python evaluate_twibot20_native.py <test_json> [model_path] [output_dir]
+"""
 ```
 
-Steps 1 and 2 can proceed as soon as data file format is confirmed. Steps 3 and 4 are sequential.
-Step 5 requires actual TwiBot-20 data files.
+Unlike `evaluate_twibot20.py` (which monkey-patches Stage 1 to clamp ratios for zero-shot
+compatibility), `evaluate_twibot20_native.py` must monkey-patch to use the Twitter-native
+extractors. The TwiBot-native `TrainedSystem` was trained with those extractors — calling the
+Reddit extractors at inference time would be a feature mismatch and must be prevented.
+
+The pattern is identical to the training entry point:
+
+```python
+bp.extract_stage1_matrix = extract_stage1_matrix_twitter
+bp.extract_stage2_features = extract_stage2_features_twitter
+try:
+    results = predict_system(sys, test_df, test_edges_df, nodes_total=len(test_df))
+finally:
+    bp.extract_stage1_matrix = _orig_s1
+    bp.extract_stage2_features = _orig_s2
+```
 
 ---
 
-## Separate Evaluation Entry Point: Required
+## Paper Comparison Table
 
-A separate `evaluate_twibot20.py` script is the correct choice (not modifying `main.py`) for these
-reasons:
+The v1.4 paper contribution is a direct comparison:
 
-1. `main.py` handles training + evaluation of BotSim-24. Mixing in TwiBot-20 inference adds complexity
-   and risks touching the training path.
-2. `trained_system_v12.joblib` is a pre-built artifact — the evaluation script only needs
-   `joblib.load`, not the full training imports.
-3. The no-retrain constraint is enforced architecturally: there is no `train_system()` call in the
-   evaluation script, making accidental retraining impossible.
-4. Separate script makes it easy to run cross-dataset evaluation independently and produce metrics
-   for a specific paper section without affecting the main experiment reproducibility.
+| System | Trained on | Evaluated on | F1 | AUC |
+|--------|-----------|--------------|-----|-----|
+| Reddit cascade (v1.3) | BotSim-24 | TwiBot-20 test | 0.0 | 0.5964 |
+| TwiBot cascade (v1.4) | TwiBot-20 train | TwiBot-20 test | TBD | TBD |
+
+This table is built from:
+- Row 1: already in `metrics_twibot20_comparison.json` (Phase 12 artifact, static condition)
+- Row 2: produced by `evaluate_twibot20_native.py` → `metrics_twibot20_native.json`
+
+Add a function to `ablation_tables.py`:
+
+```python
+def generate_platform_comparison_table(
+    reddit_metrics: dict,  # from metrics_twibot20_comparison.json, conditions.static.overall
+    twibot_metrics: dict,  # from metrics_twibot20_native.json, overall
+) -> str:
+    """Return LaTeX tabular string comparing Reddit-trained vs TwiBot-trained on TwiBot-20 test."""
+```
 
 ---
 
-## OOD Behavior Expectations (paper framing)
+## Artifact Naming Convention
 
-The cascade's novelty-aware routing will behave differently on TwiBot-20:
+| Artifact | Description |
+|----------|-------------|
+| `trained_system_v12.joblib` | Reddit-native cascade (frozen, do not overwrite) |
+| `trained_system_twibot20.joblib` | TwiBot-native cascade (new, produced by `train_twibot20.py`) |
+| `metrics_twibot20_native.json` | Evaluation metrics for TwiBot-native cascade on test.json |
 
-- **Stage 1:** High novelty expected for most TwiBot-20 accounts due to zero-filled comment counts and
-  subreddit count. This will trigger Stage 3 routing (novelty_force_stage3 threshold).
-- **Stage 3:** OOD input (single edge type, binary weights vs. 3 types + continuous weights).
-  Stage 3 Mahalanobis scores will be very high. The model may produce unreliable p3.
-- **p_final:** meta123 combines z12 and z3; if z3 is noisy, p_final quality depends on how much weight
-  meta123 places on z12 vs z3.
+Do not name the new artifact `trained_system.joblib` — that name is reserved for the active Reddit
+artifact and is referenced by `evaluate_twibot20.py`.
 
-This is not a failure mode — it is the correct description of zero-shot cross-platform transfer. The
-paper framing should present Stage 1+2 as the primary generalization signal and Stage 3 as expected
-degradation due to graph structure domain shift.
+---
 
-If the novelty-driven Stage 3 routing floods the system (all accounts routed to Stage 3) and
-Stage 3 performs poorly, consider running a second evaluation variant with Stage 3 routing disabled
-(th.s12_human=1.0, th.novelty_force_stage3=1e9) to isolate Stage 1+2 cross-platform performance.
-This is a single threshold override, no retraining required.
+## Build Order (dependency-ordered)
+
+```
+Phase 1: Twitter-native feature extractors (no dependencies on new code)
+  a. features_stage1_twitter.py
+       - extract_stage1_matrix_twitter(df) -> ndarray
+       - Uses: twibot20_io.parse_tweet_types(), df columns from load_accounts()
+       - No imports from features_stage1.py
+  b. features_stage2_twitter.py
+       - extract_stage2_features_twitter(df, embedder) -> ndarray
+       - Omits temporal features (timestamps always None in TwiBot-20)
+       - No imports from features_stage2.py
+
+Phase 2: Unit tests for new extractors (independent of Phase 3+)
+       - Smoke test: single-account input produces correct shape
+       - No-messages case: returns zero vector of correct shape
+       - All-RT account: rt_frac=1.0, orig_frac=0.0
+       - Stage 2 with embedder: output dim = 384 + 4 + 2 = 390
+
+Phase 3: train_twibot20.py (depends on Phase 1 and existing pipeline)
+       - Monkey-patch pattern: patch → train_system() → restore
+       - S1/S2 split of train.json
+       - Intra-split edge filtering (local copy of filter_edges_for_split)
+       - calibrate_thresholds() on val.json
+       - evaluate_s3() on test.json
+       - Save trained_system_twibot20.joblib
+       - Save metrics_twibot20_native.json
+
+Phase 4: evaluate_twibot20_native.py (depends on Phase 3 artifact)
+       - Thin wrapper: load artifact, monkey-patch, predict_system(), evaluate_s3()
+       - Confirm metrics match Phase 3 output (regression check)
+
+Phase 5: ablation_tables.py — platform comparison table (depends on Phase 3+4 metrics)
+       - generate_platform_comparison_table(reddit_metrics, twibot_metrics) -> LaTeX
+       - Reads from Phase 12 artifact (reddit) and metrics_twibot20_native.json (twibot)
+
+Phase 6: Remove online novelty recalibration from Reddit cascade (independent, can be done earlier)
+       - Locate and remove the chunked online-calibration path in evaluate_twibot20.py
+         (the window-based threshold recalibration loop)
+       - main.py is unaffected (online recalibration was only in evaluate_twibot20.py)
+       - Update evaluate_twibot20.py to always use online_calibration=False
+       - Re-run Phase 12 evaluation to regenerate artifacts if needed
+```
+
+Phase 1 and Phase 6 can run in parallel (no dependencies between them). Phases 2, 3, 4, 5 must
+run sequentially. Phase 6 can run at any point before or after Phases 1-5.
+
+---
+
+## OOF Stacking Discipline (explicit confirmation)
+
+The OOF contract from v1.0 is preserved unchanged for the TwiBot-native cascade:
+
+1. Stage 1, Stage 2a, Stage 2b, Stage 3 models are all fit on S1 only.
+2. `oof_meta12_predictions()` runs 5-fold CV within S2 to produce leakage-free p12 OOF predictions.
+3. `meta12` is trained on all of S2 (after OOF predictions are available).
+4. Stage 3 routing on S2 uses the OOF p12 (not the final meta12's predictions).
+5. `meta123` is trained on S2 using the OOF p12 → z12 and Stage 3 outputs.
+6. Threshold calibration uses `val.json` — a set that S2 never sees.
+7. Final evaluation uses `test.json` — a set that val and S2 never see.
+
+None of these steps require changes to `botdetector_pipeline.py`. The S1/S2 split of `train.json`
+must be stratified by label (same as Reddit cascade's shuffled split).
+
+---
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Importing Reddit feature extractors in Twitter code
+**What goes wrong:** `features_stage1_twitter.py` imports `extract_stage1_matrix` from
+`features_stage1.py` as a base, then overrides columns. Any change to the Reddit extractor
+could silently affect TwiBot training.
+**Instead:** Build `features_stage1_twitter.py` as a standalone module. Zero imports from
+`features_stage1.py` or `features_stage2.py`.
+
+### Anti-Pattern 2: Using the timestamp sentinel in Twitter Stage 2
+**What goes wrong:** `features_stage2.py` sets temporal features to `-1.0` when timestamps are
+missing. If `features_stage2_twitter.py` replicates this, the Stage 2 model is trained on `-1.0`
+sentinel values and the Mahalanobis novelty model is calibrated to those values. At inference time,
+any account with actual timestamps (possible in future Twitter datasets) would be OOD. More
+immediately, the paper's feature description would need to explain an implementation artifact.
+**Instead:** Omit temporal features entirely. The output vector is shorter but honest.
+
+### Anti-Pattern 3: Calling train_system() without restoring extractors
+**What goes wrong:** If `train_twibot20.py` patches `botdetector_pipeline.extract_stage1_matrix`
+and then crashes inside `train_system()`, the module-level extractor stays patched for the rest
+of the process. If another script imports `botdetector_pipeline` in the same process, it sees
+the Twitter extractor.
+**Instead:** Always use try/finally to restore the original extractor references.
+
+### Anti-Pattern 4: Saving the TwiBot artifact as trained_system.joblib
+**What goes wrong:** `evaluate_twibot20.py` (the zero-shot Reddit script) defaults to loading
+`trained_system_v12.joblib` but also references `trained_system.joblib` as a fallback in some
+paths. Overwriting it breaks the v1.3 zero-shot evaluation reproducibility.
+**Instead:** Always save as `trained_system_twibot20.joblib`. Never write to `trained_system.joblib`
+from `train_twibot20.py`.
+
+### Anti-Pattern 5: Running calibrate_thresholds() on test.json
+**What goes wrong:** Threshold calibration on the test set is a form of leakage — the thresholds
+are tuned to the exact distribution being evaluated.
+**Instead:** Calibrate on `val.json` exclusively. Evaluate on `test.json` with the calibrated
+thresholds without further tuning.
 
 ---
 
@@ -391,14 +544,38 @@ This is a single threshold override, no retraining required.
 
 | Risk | Severity | Mitigation |
 |------|----------|------------|
-| Twitter date format differs from expected (multiple formats in dataset) | Medium | Parse with multiple format strings; fall back to dateutil.parser; log unparseable counts |
-| edge.csv column names differ from assumed (source_id/target_id) | Low | Read header first; assert expected columns; add fallback column name guesses |
-| TwiBot-20 user IDs are integers in some files, strings in others | Medium | Cast all IDs to str at load time; same pattern as botsim24_io.py |
-| User in label.csv not present in user.json (or vice versa) | Low | Filter account table to intersection of both; log dropped count |
-| Stage 3 graph is extremely large (TwiBot-20 has ~230K users in full dataset) | High | TwiBot-20 has subsets (TwiBot-20-Subet); use subset. If full dataset, build_graph_features_nodeidx runs on batch, not full graph — still fine since we only look up node_ids from accounts_tb20 |
-| `messages` list is empty for many accounts (no tweets in user.json) | Medium | Stage 2 handles empty messages gracefully (returns zeros). Stage 1 not affected. Log zero-message rate. |
+| TwiBot-20 train.json label imbalance differs from val/test | Medium | Log class distribution of each split; use `class_weight="balanced"` in all LightGBM and LogisticRegression calls (already the default in the pipeline) |
+| Stage 2 output dimension (390) does not match Reddit Stage 2 (391) | Low | Dimensions need not match — each `TrainedSystem` carries its own model weights; there is no shared weight between Reddit and TwiBot cascades |
+| Monkey-patch not thread-safe if ever parallelized | Low | Both entry points are `__main__` scripts; no concurrent imports |
+| TwiBot-20 accounts with zero tweets | Medium | `extract_stage2_features_twitter` must return a zero embedding vector (not crash) for empty `messages` lists — same handling as `features_stage2.py` |
+| val.json too small for reliable calibration | Medium | TwiBot-20 val split has ~2628 accounts — sufficient for Optuna TPE with 50-100 trials; use fewer trials than Reddit cascade (8-50 range) |
+| Stage 3 neighbor sparsity in TwiBot-20 train split | Medium | `build_edges()` already drops cross-set edges (edges referencing accounts not in the current JSON file); intra-split filtering via `filter_edges_for_split` further restricts to within-split edges; result may be a sparse graph — this is correct and expected |
 
 ---
 
-*Architecture analysis: 2026-04-16*
-*Milestone: v1.2 TwiBot-20 Cross-Dataset Evaluation*
+## Summary: What to Build, What to Reuse, What to Leave Alone
+
+**Build (4 new files, 1 new function):**
+- `features_stage1_twitter.py` — Twitter-native Stage 1 extractor (11 features, no Reddit columns)
+- `features_stage2_twitter.py` — Twitter-native Stage 2 extractor (390-d, no temporal sentinel)
+- `train_twibot20.py` — Full cascade training entry point for TwiBot-20
+- `evaluate_twibot20_native.py` — Inference + evaluation entry point for TwiBot-native cascade
+- `ablation_tables.generate_platform_comparison_table()` — Paper comparison table
+
+**Reuse unchanged (14 components):**
+`train_system`, `predict_system`, `TrainedSystem`, `StageThresholds`, `MahalanobisNovelty`,
+`Stage1/2/3 model classes`, `AMRDeltaRefiner`, `Stage2LSTMRefiner`, routing gates, `oof_meta12_predictions`,
+`build_graph_features_nodeidx`, `evaluate_s3`, `calibrate_thresholds`, `twibot20_io` (both functions)
+
+**Modify (2 files):**
+- `main.py` — Remove online novelty recalibration block
+- `ablation_tables.py` — Add one new comparison table function
+
+**Leave alone (immutable):**
+`features_stage1.py`, `features_stage2.py`, `evaluate_twibot20.py`, `trained_system_v12.joblib`,
+all Phase 12 paper artifacts
+
+---
+
+*Architecture analysis: 2026-04-18*
+*Milestone: v1.4 Twitter-Native Supervised Baseline*

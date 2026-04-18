@@ -2,111 +2,144 @@
 
 ## Overview
 
-A three-stage cascade classifier (metadata → content/temporal → graph structure) for detecting social media bots, trained on the BotSim-24 Reddit dataset. The system routes accounts through escalating detection stages using novelty-aware gating, with AMR semantic refinement at Stage 2b and logistic-regression meta-learners stacking the stage outputs. v1.3 ships the zero-shot transfer path to TwiBot-20: the BotSim-24-trained cascade evaluates TwiBot-20 test accounts without retraining, using a behaviorally grounded Twitter-to-Reddit feature adapter and optional sliding-window online threshold recalibration. See `VERSION.md` for the v1.3 release contract.
+A three-stage cascade classifier for social bot detection with metadata,
+content/temporal, and graph stages. The original system was trained on the
+BotSim-24 Reddit dataset; v1.4 adds a Twitter-native TwiBot-20 baseline so the
+repo can compare:
+
+- Reddit-trained cascade on TwiBot-20 (`trained_system_v12.joblib`)
+- TwiBot-trained cascade on TwiBot-20 (`trained_system_twibot20.joblib`)
+
+The maintained paper-facing comparison is no longer "static vs recalibrated"
+Reddit transfer. That older Phase 12 evidence remains archived for provenance,
+but the active v1.4 story is Reddit transfer vs TwiBot-native supervised
+performance.
 
 ## Environment Assumptions
 
-- **Python**: CPython 3.13.
-- **Dependencies**: `scikit-learn`, `lightgbm`, `sentence-transformers`, `torch` (tensor loading only), `joblib`, `numpy`, `pandas`. Dependencies are installed manually — no pinned requirements file currently ships with this repository.
-- **Deterministic seed**: `SEED=42` across all experiments.
-- **Operating system**: The release was packaged on Windows 10. The production code path contains no `tempfile`/`gettempdir` usage (pytest-level friction only — see Known Caveats).
+- Python: CPython 3.13
+- Key dependencies: `scikit-learn`, `lightgbm`, `sentence-transformers`,
+  `torch`, `joblib`, `numpy`, `pandas`
+- Deterministic seed: `SEED=42`
+- OS: Windows 10 was the packaging environment
 
-## Required Inputs (User-Supplied)
+## Required Inputs
 
-The following files are gitignored and must be provided locally before running:
+For the maintained Phase 16 comparison flow:
 
-- `test.json` — TwiBot-20 test split. Obtain from the TwiBot-20 dataset release and place at the repo root.
-- `trained_system_v12.joblib` — v1.2 trained cascade. Produced by the v1.2 training pipeline (Phase 5 of this repo). Place at the repo root.
+- `test.json` — TwiBot-20 test split
+- `trained_system_v12.joblib` — Reddit-trained transfer baseline artifact
+- `trained_system_twibot20.joblib` — TwiBot-native supervised artifact
 
-The following files are also gitignored but are **NOT** required for the v1.3 system-version reproduction (v1.3 is zero-shot inference only):
+Optional but useful when regenerating native artifacts from scratch:
 
-- `train.json` — TwiBot-20 training split.
-- `dev.json` — TwiBot-20 development split.
-- `trained_system_v11.joblib` — v1.1 model, retained for ablation comparison only.
+- `train.json`
+- `dev.json`
+
+For the full `ablation_tables.py` run, the repo-root BotSim-24 assets are still
+needed:
+
+- `Users.csv`
+- `user_post_comment.json`
+- `edge_index.pt`
+- `edge_type.pt`
+- `edge_weight.pt`
+- `results_v10.json`
 
 ## Reproduction Guide
 
-Follow these steps to reproduce the live Phase 12 TwiBot system-version artifacts end to end.
-
-**Step 1 — Confirm required inputs are present at the repo root:**
+### Step 1 — Confirm the model artifacts and TwiBot test split are present
 
 ```bash
-ls test.json trained_system_v12.joblib
+ls test.json trained_system_v12.joblib trained_system_twibot20.joblib
 ```
 
-Both files must exist before proceeding.
-
-**Step 2 — Run the canonical TwiBot evaluation:**
+### Step 2 — Generate the maintained Reddit-transfer baseline artifacts
 
 ```bash
 python evaluate_twibot20.py test.json trained_system_v12.joblib \
-  .planning/workstreams/milestone/phases/12-fresh-transfer-evidence-and-paper-outputs/artifacts
+  .planning/phases/16-comparative-paper-outputs-and-reddit-cleanup/artifacts
 ```
 
-This writes four files to `.planning/workstreams/milestone/phases/12-fresh-transfer-evidence-and-paper-outputs/artifacts/`:
+This writes:
 
-- `results_twibot20.json`
-- `metrics_twibot20.json`
-- `metrics_twibot20_comparison.json`
-- `transfer_evidence_summary.json`
+- `.planning/phases/16-comparative-paper-outputs-and-reddit-cleanup/artifacts/results_twibot20_reddit_transfer.json`
+- `.planning/phases/16-comparative-paper-outputs-and-reddit-cleanup/artifacts/metrics_twibot20_reddit_transfer.json`
 
-**Step 3 — Regenerate Table 5 and the transfer interpretation text:**
+### Step 3 — Generate the TwiBot-native evaluation artifacts
+
+If the Phase 15 native metrics are not already present, run:
+
+```bash
+python evaluate_twibot20_native.py test.json trained_system_twibot20.joblib \
+  .planning/phases/15-twibot-cascade-training-and-evaluation/artifacts
+```
+
+This writes:
+
+- `.planning/phases/15-twibot-cascade-training-and-evaluation/artifacts/results_twibot20_native.json`
+- `.planning/phases/15-twibot-cascade-training-and-evaluation/artifacts/metrics_twibot20_native.json`
+
+### Step 4 — Regenerate the paper-facing comparison and Table 5 outputs
 
 ```bash
 python ablation_tables.py
 ```
 
-This writes two files to `tables/`:
+This writes:
 
+- `.planning/phases/16-comparative-paper-outputs-and-reddit-cleanup/artifacts/metrics_twibot20_reddit_vs_native.json`
 - `tables/table5_cross_dataset.tex`
 - `tables/table5_transfer_interpretation.txt`
 
-**Step 4 (Optional) — Redirect Table 5 reads/writes via environment variables:**
+## Environment Overrides
+
+`ablation_tables.py` supports the following overrides:
+
+- `TWIBOT_COMPARISON_PATH` — override the Phase 16 Reddit-vs-native comparison artifact path
+- `TWIBOT_REDDIT_METRICS_PATH` — override the Reddit-transfer metrics path
+- `TWIBOT_NATIVE_METRICS_PATH` — override the TwiBot-native metrics path
+- `TABLE5_OUTPUT_PATH` — override where `table5_cross_dataset.tex` is written
+- `TABLE5_INTERPRETATION_PATH` — override where `table5_transfer_interpretation.txt` is written
+
+Example:
 
 ```bash
-TWIBOT_COMPARISON_PATH=/alt/path/metrics_twibot20_comparison.json \
-TABLE5_OUTPUT_PATH=/alt/path/table5.tex \
-TABLE5_INTERPRETATION_PATH=/alt/path/table5_interpretation.txt \
+TWIBOT_REDDIT_METRICS_PATH=/alt/reddit_metrics.json \
+TWIBOT_NATIVE_METRICS_PATH=/alt/native_metrics.json \
+TABLE5_OUTPUT_PATH=/alt/table5.tex \
+TABLE5_INTERPRETATION_PATH=/alt/table5_interpretation.txt \
 python ablation_tables.py
 ```
 
 ## Expected Outputs
 
-The canonical run produces the following files:
+The maintained v1.4 comparison flow produces:
 
-- `results_twibot20.json` — per-account cascade outputs for all TwiBot-20 test accounts.
-- `metrics_twibot20.json` — overall/per-stage/routing metrics for the recalibrated run.
-- `metrics_twibot20_comparison.json` — static vs recalibrated comparison plus deltas (consumed by Table 5).
-- `transfer_evidence_summary.json` — compact evidence summary with interpretation verdict.
-- `tables/table5_cross_dataset.tex` — paper-ready cross-dataset LaTeX table.
-- `tables/table5_transfer_interpretation.txt` — human-readable transfer-result interpretation.
+- `results_twibot20_reddit_transfer.json` — per-account Reddit-transfer outputs
+- `metrics_twibot20_reddit_transfer.json` — overall/per-stage/routing Reddit-transfer metrics
+- `results_twibot20_native.json` — per-account TwiBot-native outputs
+- `metrics_twibot20_native.json` — overall/per-stage/routing TwiBot-native metrics
+- `metrics_twibot20_reddit_vs_native.json` — machine-readable Reddit-vs-native comparison artifact
+- `tables/table5_cross_dataset.tex` — paper-ready cross-dataset comparison table
+- `tables/table5_transfer_interpretation.txt` — concise interpretation text for the comparison result
 
-Release-time verdict (live Phase 12 run):
-
-> static F1=0.0 / AUC=0.5964 · recalibrated F1=0.0 / AUC=0.5879 · verdict: `no_material_change`
-
-Recalibration shifts Stage 3 routing on TwiBot accounts but does not improve final F1 at the fixed 0.5 decision threshold. BotSim-24 in-domain performance: F1=0.9767, AUC=0.9992.
+Historical Phase 12 artifacts such as `metrics_twibot20_comparison.json` and
+`transfer_evidence_summary.json` remain archived for provenance, but they are no
+longer the maintained default comparison contract.
 
 ## Known Caveats
 
-- **Windows pytest tmp_path cleanup**: `pytest` emits permission warnings on Windows when clearing `.pytest_cache` and `tmp_path` directories. The production code paths themselves use zero `tempfile`/`gettempdir` calls (confirmed in Phase 11) — this does not affect the canonical evaluation command above. Only the test suite is affected.
-- **TwiBot zero-shot weakness**: at release time the TwiBot transfer produces static F1=0.0 (AUC=0.5964) and recalibrated F1=0.0 (AUC=0.5879). Recalibration shifts Stage 3 routing but does NOT improve final F1. Verdict: `no_material_change`. This is the documented transfer regime for v1.3.
-- **Stage 2b AMR stub**: the v1.3 system version still uses the embedding-based AMR proxy from v1.0, not true AMR graph parsing. The Stage 2b delta-logit adjustment is active but is grounded in sentence-transformer embeddings, not semantic role labels.
-- **Weak-label calibration artifact**: because TwiBot zero-shot predictions are near the decision threshold, precision and recall collapse to 0.0 on the fixed 0.5 threshold. This is a transfer-regime artifact — the pipeline is not broken.
+- Windows pytest temp-directory cleanup remains permission-sensitive in this environment. Production code is unaffected; the friction is in the test harness cleanup path.
+- The Reddit-trained transfer result is expected to remain weak on TwiBot-20. That weak transfer result is the baseline contrast that motivates the TwiBot-native model.
+- The Stage 2b AMR path is still the embedding-based proxy from v1.0, not true AMR graph parsing.
+- Multi-seed stability and alternate calibration approaches remain deferred.
 
-## Environment Assumptions (Addendum)
+## Known Limitations
 
-- The release was exercised on Windows 10 with Python 3.13. Linux/macOS have not been re-verified for this specific v1.3 release cut.
-- The gitignored input files (`test.json`, `trained_system_v12.joblib`) must be present at the repo root for the canonical command to succeed.
-- `ablation_tables.py` expects additional BotSim-24 assets (`Users.csv`, `user_post_comment.json`, `edge_index.pt`, `edge_type.pt`, `edge_weight.pt`) at the repo root for the full table set. Table 5 itself only requires the Phase 12 comparison artifact (`metrics_twibot20_comparison.json`).
+- No realtime serving or dashboard UI
+- No online novelty recalibration in the maintained Reddit transfer path
+- No true AMR graph parsing yet
+- No confidence-interval / multi-seed paper analysis yet
 
-## Known Limitations (Out of Scope for v1.3)
-
-- No TwiBot-20 retraining or supervised adaptation in this release (zero-shot transfer only).
-- No new social platform integrations beyond TwiBot-20.
-- No frontend or dashboard work.
-- No full Twitter-native Stage 2 or Stage 3 redesign (deferred).
-- No multi-seed confidence intervals on cross-domain metrics (deferred).
-- No true AMR graph parsing replacing the current embedding stub (deferred).
-
-See `VERSION.md` for the exact artifact contract of this release.
+See `VERSION.md` for the current release contract.

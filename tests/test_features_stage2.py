@@ -266,6 +266,24 @@ def test_feat03_default_zero():
     assert feat1[0, 394] == 0.0, "hour_entropy must be 0.0 for single message"
 
 
+def test_missing_timestamps_use_sentinel_values():
+    """Accounts with messages but no usable timestamps should not look like true zeros."""
+    rec = RecordingEmbedder()
+    df = _make_single_account_df(
+        messages=[
+            {"text": "msg1", "ts": None},
+            {"text": "msg2", "ts": None},
+        ]
+    )
+    feat = extract_stage2_features(df, rec)
+
+    assert feat[0, 388] == -1.0, "rate should use missing-timestamp sentinel"
+    assert feat[0, 389] == -1.0, "delta_mean should use missing-timestamp sentinel"
+    assert feat[0, 390] == -1.0, "delta_std should use missing-timestamp sentinel"
+    assert feat[0, 391] == -1.0, "cv_intervals should use missing-timestamp sentinel"
+    assert feat[0, 394] == -1.0, "hour_entropy should use missing-timestamp sentinel"
+
+
 def test_feat03_entropy_value():
     """hour_entropy must match Shannon entropy over 24-hour histogram."""
     from datetime import datetime

@@ -47,7 +47,7 @@ def test_load_accounts_schema(tmp_path):
     path = _write_test_json(records, tmp_path)
     df = load_accounts(path)
     required_cols = ["node_idx", "screen_name", "statuses_count", "followers_count",
-                     "friends_count", "created_at", "messages", "label"]
+                     "friends_count", "created_at", "messages", "domain_list", "label"]
     for col in required_cols:
         assert col in df.columns, f"Missing column: {col}"
     assert len(df) == 2, f"Expected 2 rows, got {len(df)}"
@@ -81,6 +81,14 @@ def test_messages_structure(tmp_path):
     assert messages[1] == {"text": "world", "ts": None, "kind": "tweet"}, (
         f"Unexpected message[1]: {messages[1]}"
     )
+
+
+def test_domain_list_loaded(tmp_path):
+    records = [_make_record("1", "alice", tweets=["hello"])]
+    records[0]["domain"] = ["Politics", "News"]
+    path = _write_test_json(records, tmp_path)
+    df = load_accounts(path)
+    assert df.iloc[0]["domain_list"] == ["Politics", "News"]
 
 
 def test_null_tweet_handled(tmp_path):

@@ -1,0 +1,45 @@
+{
+  "alternatives": [],
+  "executed_trials": 1,
+  "metric": "f1",
+  "plateau_patience": 1,
+  "requested_trials": 1,
+  "selected_trial": {
+    "amr_usage_rate": 0.5,
+    "positive_predictions": 2,
+    "primary_score": 0.5,
+    "rank": 1,
+    "secondary_brier": 0.1,
+    "secondary_log_loss": 0.2,
+    "stage3_usage_rate": 0.5,
+    "thresholds": {
+      "disagreement_trigger": 4.0,
+      "n1_max_for_exit": 3.0,
+      "n2_trigger": 3.0,
+      "novelty_force_stage3": 3.5,
+      "s12_bot": 0.98,
+      "s12_human": 0.02,
+      "s1_bot": 0.98,
+      "s1_human": 0.02,
+      "s2a_bot": 0.95,
+      "s2a_human": 0.05
+    },
+    "trial_number": 1
+  },
+  "selection_policy": {
+    "plateau_guardrail": "patience-based early stop on no lexicographic improvement",
+    "primary_metric": "f1",
+    "secondary_metrics": [
+      "secondary_log_loss",
+      "secondary_brier"
+    ],
+    "strategy": "hybrid"
+  },
+  "stopped_early": false,
+  "tie_analysis": {
+    "best_primary_score": 0.5,
+    "best_tie_count": 1,
+    "same_hard_predictions": true,
+    "same_routing": true
+  }
+}

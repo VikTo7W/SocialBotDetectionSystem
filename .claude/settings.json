@@ -7,7 +7,18 @@
       "Bash(git commit *)",
       "Bash(python -m pytest tests/ -x -q --tb=short)",
       "Skill(gsd-code-review)",
-      "Skill(gsd-code-review:*)"
+      "Skill(gsd-code-review:*)",
+      "Skill(gsd-debug)",
+      "Skill(gsd-debug:*)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs commit 'docs: start milestone v1.2 TwiBot-20 Cross-Domain Transfer' --files .planning/PROJECT.md .planning/workstreams/milestone/STATE.md)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs resolve-model gsd-roadmapper --raw)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs agent-skills gsd-roadmapper)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs commit 'docs: define milestone v1.2 requirements' --files .planning/REQUIREMENTS.md)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs commit 'docs: create milestone v1.2 roadmap \\(3 phases\\)' --files .planning/workstreams/milestone/ROADMAP.md .planning/workstreams/milestone/STATE.md .planning/REQUIREMENTS.md)",
+      "Skill(gsd-verify-work)",
+      "Skill(gsd-verify-work:*)",
+      "Read(//c/Users/dzeni/.claude/get-shit-done/workflows/**)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs commit 'docs: start milestone v1.4 Twitter-Native Supervised Baseline' --files .planning/PROJECT.md .planning/STATE.md)"
     ]
   }
 }

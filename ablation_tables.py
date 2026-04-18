@@ -6,7 +6,7 @@ Produces:
   Table 2: Stage contribution — p1, p12, p_final cascade stages
   Table 3: Routing efficiency — stage exit percentages and AMR trigger rate
   Table 4: Stage 1 feature group ablation — baseline vs masked variants
-  Table 5: Cross-dataset comparison — BotSim-24 (Reddit, in-dist.) vs TwiBot-20 (Twitter, zero-shot)
+  Table 5: Cross-dataset comparison — BotSim-24 plus Reddit-transfer vs TwiBot-native
   Table 5 (stage2b): Stage 2b variant comparison — AMR vs LSTM overall metrics
   Table 6 (stage2b): Stage 2b routing comparison — AMR vs LSTM routing behavior
 
@@ -18,7 +18,7 @@ Requires:
     - .planning/workstreams/stage2b-lstm-version/phases/10-evaluation-and-baseline-comparison/10-real-run-variant-comparison.json
     - results_v10.json (v1.0 S3 metrics from git worktree retrain)
     - Users.csv, user_post_comment.json, edge_index.pt, edge_type.pt, edge_weight.pt
-    - metrics_twibot20.json (TwiBot-20 evaluate_s3() output — run evaluate_twibot20.py first)
+    - Phase 16 Reddit/native metrics or comparison artifact (run evaluate_twibot20.py and evaluate_twibot20_native.py first)
 """
 
 import json
@@ -53,6 +53,28 @@ FEATURE_GROUPS = {
     "subreddit_breadth":   [5],
     "post_comment_ratios": [6, 7, 8, 9],
 }
+
+PHASE16_ARTIFACT_DIR = os.path.join(
+    ".planning",
+    "phases",
+    "16-comparative-paper-outputs-and-reddit-cleanup",
+    "artifacts",
+)
+DEFAULT_REDDIT_TRANSFER_METRICS_PATH = os.path.join(
+    PHASE16_ARTIFACT_DIR,
+    "metrics_twibot20_reddit_transfer.json",
+)
+DEFAULT_NATIVE_METRICS_PATH = os.path.join(
+    ".planning",
+    "phases",
+    "15-twibot-cascade-training-and-evaluation",
+    "artifacts",
+    "metrics_twibot20_native.json",
+)
+DEFAULT_COMPARISON_PATH = os.path.join(
+    PHASE16_ARTIFACT_DIR,
+    "metrics_twibot20_reddit_vs_native.json",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -169,29 +191,147 @@ def build_table4(group_metrics: dict) -> pd.DataFrame:
 
 def generate_cross_dataset_table(
     botsim24_metrics: dict,
-    twibot20_metrics: dict,
+    reddit_transfer_metrics: dict,
+    twibot20_native_metrics: dict,
 ) -> pd.DataFrame:
     """
-    Table 5 — Cross-Dataset Comparison: BotSim-24 (in-distribution) vs TwiBot-20 (zero-shot).
+    Table 5 — Cross-Dataset Comparison: BotSim-24 vs Reddit transfer vs TwiBot native.
 
     Both inputs are full evaluate_s3() return dicts with keys "overall", "per_stage", "routing".
     This function reads metrics["overall"] for the table rows (per D-06, D-07).
 
     Args:
         botsim24_metrics: evaluate_s3() return dict for BotSim-24 S3 test set.
-        twibot20_metrics: evaluate_s3() return dict for TwiBot-20 test set.
+        reddit_transfer_metrics: evaluate_s3() return dict for the Reddit-trained zero-shot TwiBot run.
+        twibot20_native_metrics: evaluate_s3() return dict for the TwiBot-native supervised run.
 
     Returns:
-        DataFrame with columns ["Metric", "BotSim-24 (Reddit, in-dist.)", "TwiBot-20 (Twitter, zero-shot)"]
-        and 4 rows: F1, AUC-ROC, Precision, Recall.
+        DataFrame with BotSim-24, Reddit-transfer, and TwiBot-native columns.
     """
     bs = botsim24_metrics["overall"]
-    tw = twibot20_metrics["overall"]
+    reddit_transfer = reddit_transfer_metrics["overall"]
+    native = twibot20_native_metrics["overall"]
     return pd.DataFrame({
         "Metric": ["F1", "AUC-ROC", "Precision", "Recall"],
         "BotSim-24 (Reddit, in-dist.)": [bs["f1"], bs["auc"], bs["precision"], bs["recall"]],
-        "TwiBot-20 (Twitter, zero-shot)": [tw["f1"], tw["auc"], tw["precision"], tw["recall"]],
+        "TwiBot-20 (Reddit transfer)": [
+            reddit_transfer["f1"],
+            reddit_transfer["auc"],
+            reddit_transfer["precision"],
+            reddit_transfer["recall"],
+        ],
+        "TwiBot-20 (TwiBot-native)": [
+            native["f1"],
+            native["auc"],
+            native["precision"],
+            native["recall"],
+        ],
     })
+
+
+def load_twibot20_comparison(path: str) -> dict:
+    """Load the persisted Phase 10 TwiBot comparison artifact."""
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def classify_transfer_result(delta_f1: float, materiality: float = 0.01) -> str:
+    """Classify whether the TwiBot-native baseline materially improves over Reddit transfer."""
+    if delta_f1 > materiality:
+        return "improved"
+    if delta_f1 < -materiality:
+        return "worsened"
+    return "no_material_change"
+
+
+def build_reddit_vs_native_comparison_artifact(
+    *,
+    reddit_transfer_metrics: dict,
+    twibot20_native_metrics: dict,
+    reddit_metrics_path: str,
+    native_metrics_path: str,
+    reddit_model_path: str = "trained_system_v12.joblib",
+    native_model_path: str = "trained_system_twibot20.joblib",
+    threshold: float = 0.5,
+) -> dict:
+    """Build the stable v1.4 Reddit-transfer vs TwiBot-native comparison payload."""
+    reddit_overall = reddit_transfer_metrics["overall"]
+    native_overall = twibot20_native_metrics["overall"]
+    return {
+        "comparison_type": "reddit_transfer_vs_twibot_native",
+        "threshold": threshold,
+        "sources": {
+            "reddit_transfer_metrics_path": reddit_metrics_path,
+            "twibot_native_metrics_path": native_metrics_path,
+            "reddit_model_path": reddit_model_path,
+            "twibot_native_model_path": native_model_path,
+        },
+        "conditions": {
+            "reddit_transfer": reddit_transfer_metrics,
+            "twibot_native": twibot20_native_metrics,
+        },
+        "delta_overall": {
+            "f1": native_overall["f1"] - reddit_overall["f1"],
+            "auc": native_overall["auc"] - reddit_overall["auc"],
+            "precision": native_overall["precision"] - reddit_overall["precision"],
+            "recall": native_overall["recall"] - reddit_overall["recall"],
+        },
+    }
+
+
+def build_transfer_result_interpretation(comparison: dict) -> str:
+    """Build a concise milestone-facing interpretation from the v1.4 comparison metrics."""
+    delta = comparison["delta_overall"]
+    verdict = classify_transfer_result(delta["f1"])
+    reddit_transfer = comparison["conditions"]["reddit_transfer"]["overall"]
+    native = comparison["conditions"]["twibot_native"]["overall"]
+    return (
+        f"Comparison result: {verdict}.\n"
+        f"Primary basis: F1 delta = {delta['f1']:+.4f} "
+        f"(Reddit transfer {reddit_transfer['f1']:.4f} -> "
+        f"TwiBot-native {native['f1']:.4f}).\n"
+        f"AUC delta = {delta['auc']:+.4f}, "
+        f"precision delta = {delta['precision']:+.4f}, "
+        f"recall delta = {delta['recall']:+.4f}.\n"
+        f"Source artifact: {comparison.get('comparison_type', 'unknown')}."
+    )
+
+
+def write_transfer_result_interpretation(comparison: dict, path: str) -> None:
+    """Persist the transfer-result interpretation alongside the paper outputs."""
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    text = build_transfer_result_interpretation(comparison)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text + "\n")
+
+
+def _load_metrics(path: str) -> dict:
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _load_or_build_phase16_comparison(
+    comparison_path: str,
+    reddit_metrics_path: str,
+    native_metrics_path: str,
+) -> dict | None:
+    if os.path.exists(comparison_path):
+        return load_twibot20_comparison(comparison_path)
+    if not (os.path.exists(reddit_metrics_path) and os.path.exists(native_metrics_path)):
+        return None
+
+    comparison = build_reddit_vs_native_comparison_artifact(
+        reddit_transfer_metrics=_load_metrics(reddit_metrics_path),
+        twibot20_native_metrics=_load_metrics(native_metrics_path),
+        reddit_metrics_path=reddit_metrics_path,
+        native_metrics_path=native_metrics_path,
+    )
+    os.makedirs(os.path.dirname(comparison_path), exist_ok=True)
+    with open(comparison_path, "w", encoding="utf-8") as f:
+        json.dump(comparison, f, indent=2)
+    return comparison
 
 
 def build_table5(variant_comparison: dict) -> pd.DataFrame:
@@ -392,19 +532,53 @@ def main():
     save_latex(df_t3, "tables/table3_routing_efficiency.tex")
     save_latex(df_t4, "tables/table4_feature_group_ablation.tex")
 
-    # 8. Table 5 — Cross-Dataset Comparison (TW-07)
-    metrics_twibot20_path = "metrics_twibot20.json"
-    if os.path.exists(metrics_twibot20_path):
-        with open(metrics_twibot20_path) as f:
-            twibot20_metrics = json.load(f)
-        df_t5 = generate_cross_dataset_table(report, twibot20_metrics)
+    # 8. Table 5 — Cross-Dataset Comparison (Phase 16)
+    metrics_twibot20_path = os.environ.get(
+        "TWIBOT_COMPARISON_PATH",
+        DEFAULT_COMPARISON_PATH,
+    )
+    reddit_metrics_path = os.environ.get(
+        "TWIBOT_REDDIT_METRICS_PATH",
+        DEFAULT_REDDIT_TRANSFER_METRICS_PATH,
+    )
+    native_metrics_path = os.environ.get(
+        "TWIBOT_NATIVE_METRICS_PATH",
+        DEFAULT_NATIVE_METRICS_PATH,
+    )
+    table5_output_path = os.environ.get(
+        "TABLE5_OUTPUT_PATH", "tables/table5_cross_dataset.tex"
+    )
+    interpretation_output_path = os.environ.get(
+        "TABLE5_INTERPRETATION_PATH", "tables/table5_transfer_interpretation.txt"
+    )
+    print(f"[table5] Comparison artifact path: {metrics_twibot20_path}")
+    twibot20_comparison = _load_or_build_phase16_comparison(
+        metrics_twibot20_path,
+        reddit_metrics_path,
+        native_metrics_path,
+    )
+    if twibot20_comparison is not None:
+        df_t5 = generate_cross_dataset_table(
+            report,
+            twibot20_comparison["conditions"]["reddit_transfer"],
+            twibot20_comparison["conditions"]["twibot_native"],
+        )
         print("\n=== Table 5: Cross-Dataset Comparison ===")
         print(df_t5.to_string(index=False))
-        save_latex(df_t5, "tables/table5_cross_dataset.tex")
+        save_latex(df_t5, table5_output_path)
+        write_transfer_result_interpretation(
+            twibot20_comparison, interpretation_output_path
+        )
+        print(f"[table5] Saved LaTeX to {table5_output_path}")
+        print(f"[table5] Saved interpretation to {interpretation_output_path}")
         print("\nAll 5 tables exported to tables/*.tex")
     else:
         print(f"\n[SKIP] Table 5: {metrics_twibot20_path} not found.")
-        print("Run 'python evaluate_twibot20.py' first to generate TwiBot-20 metrics.")
+        print(
+            "Run 'python evaluate_twibot20.py' and "
+            "'python evaluate_twibot20_native.py' first to generate Reddit-transfer "
+            "and TwiBot-native metrics."
+        )
         print("\n4 tables exported to tables/*.tex (Table 5 skipped)")
 
     # 9. Stage 2b supplementary tables (optional — requires variant comparison artifact)
