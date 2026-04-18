@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: Twibot System Version
 status: in_progress
-stopped_at: Phase 11 complete, ready to plan Phase 12
-last_updated: "2026-04-18T12:30:00.000Z"
-last_activity: 2026-04-18 -- Phase 11 complete (4/4 UAT passed)
+stopped_at: Phase 12 complete, ready to plan Phase 13
+last_updated: "2026-04-18T13:00:00.000Z"
+last_activity: 2026-04-18 -- Phase 12 complete (fresh TwiBot artifacts generated)
 ---
 
 # Project State
@@ -15,25 +15,25 @@ last_activity: 2026-04-18 -- Phase 11 complete (4/4 UAT passed)
 See: `.planning/PROJECT.md` and `.planning/workstreams/milestone/ROADMAP.md`
 
 **Core value:** The cascade must produce a single, well-calibrated bot probability per account while routing efficiently through stages and remaining interpretable when transferred out of domain.
-**Current focus:** Defining and planning v1.3 Twibot System Version
+**Current focus:** Phase 13 — System Version Packaging and Release Docs
 
 ## Current Position
 
-Phase: 12 of 13 — Fresh Transfer Evidence and Paper Outputs
+Phase: 13 of 13 — System Version Packaging and Release Docs
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-04-18 — Phase 11 complete (4/4 UAT passed)
+Last activity: 2026-04-18 — Phase 12 complete (fresh TwiBot artifacts generated)
 
-Progress: Phase 11 complete. TwiBot evaluation path hardened: output_dir routing, stable artifact filenames, documented canonical command, TWIBOT_COMPARISON_PATH env-var override. Phase 12 is next.
+Progress: Phases 11-12 complete. Fresh TwiBot evidence generated: static AUC=0.5964, recalibrated AUC=0.5879, verdict=no_material_change. Table 5 LaTeX regenerated from live artifacts. Phase 13 is the final phase.
 
 ## Performance Metrics
 
-**Latest transfer check:**
+**Latest transfer results (Phase 12 live run):**
 
-- Saved TwiBot evaluation predicts only 1 bot out of 1183 accounts at threshold 0.5
-- `F1 = 0.0`
-- `AUC = 0.4674`
-- Stage 3 usage is near zero despite graph coverage
+- BotSim-24 in-domain: `F1=0.9767`, `AUC=0.9992`
+- TwiBot static: `F1=0.0`, `AUC=0.5964`
+- TwiBot recalibrated: `F1=0.0`, `AUC=0.5879`
+- Transfer verdict: `no_material_change` (recalibration does not materially improve zero-shot transfer)
 
 ## Accumulated Context
 
@@ -62,11 +62,11 @@ Carried forward context from v1.2 close:
 ### Blockers/Concerns
 
 - Windows friction is pytest tmp_path cleanup permissions only — production code has zero tempfile usage (confirmed Phase 11)
-- Fresh TwiBot outputs still need to be generated for final evidence (Phase 12 scope)
-- metrics_twibot20_comparison.json does not exist yet — Phase 12 must generate it via a live run
+- TwiBot F1=0.0 across both conditions — the zero-shot transfer is weak; Phase 13 docs must clearly state this as a known limitation
+- Pytest cache warnings persist in this environment (permission-constrained .pytest_cache creation) but targeted assertions pass
 
 ## Session Continuity
 
 Last session: 2026-04-18
-Stopped at: Phase 11 complete, ready to plan Phase 12
+Stopped at: Phase 12 complete, ready to plan Phase 13
 Resume file: None
