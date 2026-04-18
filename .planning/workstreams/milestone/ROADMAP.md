@@ -25,7 +25,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full phase details.
 <summary>v1.3 Twibot System Version (Phases 11-13) - ACTIVE</summary>
 
 - [x] **Phase 11: Reproducible TwiBot Evaluation Flow** - Harden the TwiBot evaluation path so static and recalibrated runs can generate stable artifacts without the current temp/cache fragility (2/2 plans) - completed 2026-04-18
-- [ ] **Phase 12: Fresh Transfer Evidence and Paper Outputs** - Run fresh TwiBot comparisons, validate the observed transfer behavior, and regenerate the cross-dataset paper outputs from live artifacts
+- [x] **Phase 12: Fresh Transfer Evidence and Paper Outputs** - Run fresh TwiBot comparisons, validate the observed transfer behavior, and regenerate the cross-dataset paper outputs from live artifacts (2/2 plans) - completed 2026-04-18
 - [ ] **Phase 13: System Version Packaging and Release Docs** - Publish the chosen TwiBot system version with explicit artifacts, commands, caveats, and release-facing documentation
 
 </details>
@@ -104,8 +104,8 @@ Plans:
   3. The artifact filenames and payload structures are explicit enough for downstream tooling and paper generation to consume reliably
 **Plans**: 2 plans
 Plans:
-- [ ] 11-01-PLAN.md - Fix two failing test stubs in tests/test_evaluate_twibot20.py so Phase 9 kwargs forwarding is absorbed by monkeypatched lambdas (REPRO-02, REPRO-03)
-- [ ] 11-02-PLAN.md - Add output_dir argument + os.path.join routing to evaluate_twibot20.py __main__, document canonical command and artifact payloads in the module docstring, and add TWIBOT_COMPARISON_PATH env-var override in ablation_tables.py (REPRO-01, REPRO-02, REPRO-03)
+- [x] 11-01-PLAN.md - Fix two failing test stubs in tests/test_evaluate_twibot20.py so Phase 9 kwargs forwarding is absorbed by monkeypatched lambdas (REPRO-02, REPRO-03)
+- [x] 11-02-PLAN.md - Add output_dir argument + os.path.join routing to evaluate_twibot20.py __main__, document canonical command and artifact payloads in the module docstring, and add TWIBOT_COMPARISON_PATH env-var override in ablation_tables.py (REPRO-01, REPRO-02, REPRO-03)
 **UI hint**: no
 
 ### Phase 12: Fresh Transfer Evidence and Paper Outputs
@@ -116,7 +116,10 @@ Plans:
   1. A fresh static-vs-recalibrated TwiBot run completes and saves comparison metrics from the current revised adapter
   2. The final LaTeX cross-dataset table is regenerated from live BotSim-24 and TwiBot artifacts
   3. The milestone records whether recalibration helped, hurt, or made no meaningful difference on TwiBot transfer
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [x] 12-01-PLAN.md - Generate fresh TwiBot comparison artifacts in a milestone-owned output directory and emit a stable evidence summary from the live comparison output (EVID-01)
+- [x] 12-02-PLAN.md - Regenerate Table 5 from the fresh comparison artifact and write the milestone-facing interpretation of whether recalibration materially helped transfer (EVID-02, EVID-03)
 **UI hint**: no
 
 ### Phase 13: System Version Packaging and Release Docs
@@ -127,7 +130,10 @@ Plans:
   1. The chosen TwiBot system version explicitly names the model artifact, comparison mode(s), and output files it ships with
   2. A developer can follow the docs to reproduce the TwiBot system-version artifacts end to end
   3. The release docs clearly state the remaining caveats, environment assumptions, and known limitations
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 13-01-PLAN.md - Author VERSION.md at the project root naming the v1.3 model artifact, evaluation modes, output files, release-time transfer verdict, and environment overrides (VERS-01)
+- [ ] 13-02-PLAN.md - Expand README.md with an end-to-end Reproduction Guide plus Known Caveats and Known Limitations sections, cross-referenced to VERSION.md (VERS-02, VERS-03)
 **UI hint**: no
 
 ## Progress
@@ -145,5 +151,5 @@ Plans:
 | 9. Sliding-Window Online Threshold Recalibration | v1.2 | 1/1 | Complete | 2026-04-18 |
 | 10. Cross-Domain Evaluation and Paper Output | v1.2 | 2/2 | Complete | 2026-04-18 |
 | 11. Reproducible TwiBot Evaluation Flow | v1.3 | 2/2 | Complete | 2026-04-18 |
-| 12. Fresh Transfer Evidence and Paper Outputs | v1.3 | 0/? | Not started | - |
-| 13. System Version Packaging and Release Docs | v1.3 | 0/? | Not started | - |
+| 12. Fresh Transfer Evidence and Paper Outputs | v1.3 | 2/2 | Complete | 2026-04-18 |
+| 13. System Version Packaging and Release Docs | v1.3 | 0/2 | Not started | - |
