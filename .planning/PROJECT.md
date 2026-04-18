@@ -13,19 +13,23 @@ v1.2 shipped the TwiBot-20 zero-shot transfer path for the Reddit-trained cascad
 
 v1.3 shipped the reproducible evaluation flow, fresh live TwiBot evidence (static F1=0.0/AUC=0.5964, recalibrated F1=0.0/AUC=0.5879, verdict=`no_material_change`), and release-facing documentation (`VERSION.md` + `README.md` reproduction guide with caveats and limitations).
 
+## Current Milestone: v1.4 Twitter-Native Supervised Baseline
+
+**Goal:** Build a Twitter-native cascade trained on TwiBot-20 to prove the system degrades without platform-matched training, and remove the broken novelty recalibration from the Reddit system.
+
+**Target features:**
+- Twitter-native feature extraction for all three stages (no Reddit mappings, no imputing, no zero-fill)
+- Full cascade trained on TwiBot-20 train.json, evaluated on test.json
+- Paper comparison table: Reddit-trained on TwiBot (F1=0.0, v1.3) vs TwiBot-trained on TwiBot
+- Remove online novelty recalibration from the Reddit cascade
+
 ## Current State
 
-v1.3 shipped 2026-04-18. The active model is `trained_system_v12.joblib`. Zero-shot TwiBot transfer produces weak but reproducible results; recalibration does not materially improve F1. The pipeline is well-documented and reproducible from `README.md`.
+v1.3 shipped 2026-04-18. The active Reddit model is `trained_system_v12.joblib`. Zero-shot TwiBot transfer produces weak but reproducible results (F1=0.0, AUC=0.5964); recalibration does not materially improve F1. The pipeline is well-documented and reproducible from `README.md`.
 
-Known gaps carried into the next milestone:
+Known gaps carried into v1.4:
 - Full pytest green-suite blocked by Windows temp-dir cleanup permissions (production code unaffected)
 - Stale pre-Phase-12 TwiBot artifacts at repo root (superseded by Phase 12 artifacts)
-
-## Next Milestone Goals
-
-- Decide next direction: supervised TwiBot baseline, Twitter-native Stage 2/Stage 3 redesign, or multi-seed ablation stability
-- Improve zero-shot transfer quality or establish a supervised comparison baseline
-- Run a milestone audit before close next time
 
 ## Core Value
 
@@ -61,36 +65,44 @@ The cascade must produce a single, well-calibrated bot probability per account w
 
 ### Active
 
-- Multi-seed ablation stability for paper confidence intervals
-- CalibratedClassifierCV on a held-out calibration subset
-- True AMR graph parsing replacing the current embedding stub
+- Twitter-native Stage 1 feature set for TwiBot-20 (no Reddit mappings, no imputing)
+- Twitter-native Stage 2 content/temporal feature set for TwiBot-20 tweet timelines
+- Twitter-native Stage 3 graph feature set from TwiBot-20 neighbor lists
+- Full cascade training on TwiBot-20 train.json with OOF stacking and meta-learners
+- TwiBot-20 test.json evaluation (F1, AUC, per-stage breakdown)
+- Paper comparison table: Reddit-trained vs TwiBot-trained on TwiBot-20 test set
+- Remove online novelty recalibration from the Reddit cascade
+- Multi-seed ablation stability for paper confidence intervals (deferred from v1.3)
+- CalibratedClassifierCV on a held-out calibration subset (deferred from v1.3)
+- True AMR graph parsing replacing the current embedding stub (deferred from v1.3)
 
 ### Out of Scope
 
 | Feature | Reason |
 |---------|--------|
 | Real-time streaming classification | Batch inference only |
-| Multi-platform supervised training | v1.2 is zero-shot transfer only |
 | Frontend or dashboard UI | API and scripts only |
 | Model retraining through the API | Offline training only |
 | Profile or description features | Permanently excluded after the leakage audit |
-| Full Twitter-native Stage 2 or Stage 3 redesign | Deferred beyond transfer stabilization |
+| Reddit→Twitter feature mapping (missingness-aware adapter) | Replaced by Twitter-native features in v1.4 |
+| Online novelty recalibration | Removed in v1.4 — does not improve transfer results |
 
 ## Context
 
-- **Dataset:** BotSim-24 provides Reddit metadata, timelines, and graph tensors. TwiBot-20 is the zero-shot transfer target for v1.2.
+- **Dataset:** BotSim-24 provides Reddit metadata, timelines, and graph tensors. TwiBot-20 provides Twitter metadata, tweet timelines, and follower/following neighbor lists with canonical train/val/test splits.
 - **Architecture:** Three-stage cascade with novelty-aware gating and logistic-regression stackers.
-- **Current state:** `trained_system_v12.joblib` is the active clean model. v1.3 starts from an implemented but not fully evidenced TwiBot transfer path and focuses on reproducible execution plus release-quality artifacts.
+- **Current state:** `trained_system_v12.joblib` is the active Reddit-trained model. v1.4 adds a separate TwiBot-20-trained cascade using Twitter-native features, stored as a distinct artifact.
 - **AMR status:** The Stage 2b semantic path is still an embedding-based proxy, not true AMR graph parsing.
-- **Paper contribution:** The novel contribution remains the cascade plus routing and semantic refinement, now strengthened by explicit cross-domain transfer analysis.
+- **Paper contribution:** The novel contribution is the cascade architecture. v1.4 strengthens the paper by showing the cascade works well when platform-matched (TwiBot trained → TwiBot test) and fails without it (Reddit trained → TwiBot test, F1=0.0).
 
 ## Constraints
 
 - **Tech stack:** Python, scikit-learn, LightGBM, sentence-transformers, and PyTorch tensor loading only
 - **No leakage:** keep split boundaries, graph filtering, OOF stacking, and Stage 2 leakage exclusions intact
-- **Zero-shot transfer:** TwiBot-20 labels are for evaluation, not adaptation or retraining
+- **Zero-shot transfer (Reddit model):** TwiBot-20 labels are not used to adapt the Reddit-trained cascade
+- **Twitter-native features:** TwiBot-20 cascade must use only fields genuinely present in TwiBot-20 — no imputing, no zero-fill for absent Reddit analogs
+- **Separate artifacts:** Reddit-trained and TwiBot-trained systems are stored as distinct joblib files; neither overwrites the other
 - **Reproducibility:** seed all experiments with `SEED=42`
-- **Feature shape stability:** Phase 8 may revise semantics and missingness handling, but should not retrain models or change expected feature dimensionality
 
 ## Key Decisions
 
@@ -112,4 +124,4 @@ The cascade must produce a single, well-calibrated bot probability per account w
 | VERSION.md is the single source of release-contract truth | README links to it; avoids duplication between reproduction guide and artifact contract | Adopted v1.3 Phase 13 |
 
 ---
-*Last updated: 2026-04-18 after v1.3 milestone close (Twibot System Version)*
+*Last updated: 2026-04-18 — v1.4 milestone started (Twitter-Native Supervised Baseline)*
