@@ -46,7 +46,7 @@ The maintained v1.5 entry points are:
 
 ### Compatibility layer
 
-`botdetector_pipeline.py` still contains the underlying stage-model classes and compatibility helpers used by the shared pipeline, but it is no longer the main maintained orchestration surface. New work should be routed through `CascadePipeline`.
+`botdetector_pipeline.py` is a re-export shim. All stage-model classes, math helpers, routing logic, and contract types are defined in `cascade_pipeline.py` and re-exported from `botdetector_pipeline.py` for any callers that have not yet been updated. Do not add new pipeline logic to `botdetector_pipeline.py`; all new orchestration code belongs in `cascade_pipeline.py`.
 
 ## Technique Rationale
 
