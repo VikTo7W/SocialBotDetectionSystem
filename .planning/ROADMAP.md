@@ -92,9 +92,9 @@
   4. Maintained callers still work without needing to know about multiple pipeline surfaces
 **Plans**: 3 plans
 Plans:
-- [ ] 22-01-PLAN.md - Create the red-test safety net for the maintained pipeline surface and compatibility-forwarding contract (CONS-01, PRES-03)
-- [ ] 22-02-PLAN.md - Consolidate orchestration ownership into `cascade_pipeline.py` and demote `botdetector_pipeline.py` to compatibility or stage-support duties (CONS-01, PRES-03)
-- [ ] 22-03-PLAN.md - Align maintained callers and docs to the clarified pipeline owner and run parity-focused verification (CONS-01, PRES-03)
+- [x] 22-01-PLAN.md - Create the red-test safety net for the maintained pipeline surface and compatibility-forwarding contract (CONS-01, PRES-03)
+- [x] 22-02-PLAN.md - Consolidate orchestration ownership into `cascade_pipeline.py` and demote `botdetector_pipeline.py` to compatibility or stage-support duties (CONS-01, PRES-03)
+- [x] 22-03-PLAN.md - Align maintained callers and docs to the clarified pipeline owner and run parity-focused verification (CONS-01, PRES-03)
 **Completed**: not completed
 **UI hint**: no
 
@@ -162,7 +162,7 @@ Plans:
 | 19. Training Entry Points and Fresh Model Retraining | v1.5 | 4/4 | Complete | 2026-04-19 |
 | 20. Evaluation Entry Points and Paper Outputs | v1.5 | 5/5 | Complete | 2026-04-19 |
 | 21. Documentation | v1.5 | 3/3 | Complete | 2026-04-19 |
-| 22. Pipeline Surface Consolidation | v1.6 | 0/3 | Planned | |
+| 22. Pipeline Surface Consolidation | v1.6 | 3/3 | Complete   | 2026-04-19 |
 | 23. Unified Feature Surface | v1.6 | 0/0 | Not started | |
 | 24. Unified Dataset I/O and Caller Migration | v1.6 | 0/0 | Not started | |
 | 25. Final File Cleanup and Comment Pass | v1.6 | 0/0 | Not started | |
