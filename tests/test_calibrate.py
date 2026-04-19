@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import botdetector_pipeline as bp
-from botdetector_pipeline import StageThresholds, Stage2LSTMRefiner
+from botdetector_pipeline import StageThresholds
 
 
 def _import_calibrate():
@@ -100,7 +100,7 @@ def test_reproducibility(minimal_system):
 
 
 def test_calibration_report_contains_trial_diagnostics(minimal_system, capsys):
-    """Phase 8: calibration stores deterministic diagnostics for each completed trial."""
+    """Phase 18: calibration stores deterministic diagnostics for the one maintained trial."""
     calibrate_thresholds = _import_calibrate()
     system, S2, edges_S2, nodes_total = minimal_system
 
@@ -108,10 +108,11 @@ def test_calibration_report_contains_trial_diagnostics(minimal_system, capsys):
     report = system.calibration_report_
 
     assert report["metric"] == "f1"
-    assert report["requested_trials"] == 10
-    assert report["executed_trials"] == len(report["trials"])
+    assert report["requested_trials"] == 1
+    assert report["executed_trials"] == 1
+    assert len(report["trials"]) == 1
     assert report["best_tie_count"] >= 1
-    assert report["selected_trial_number"] >= 0
+    assert report["selected_trial_number"] == 0
 
     for trial in report["trials"]:
         assert "primary_score" in trial
@@ -125,12 +126,11 @@ def test_calibration_report_contains_trial_diagnostics(minimal_system, capsys):
         assert "thresholds" in trial
 
     output = capsys.readouterr().out
-    assert "best-score ties" in output
-    assert "selected trial" in output
+    assert "single trial selected" in output
 
 
 def test_report_summary_exposes_selected_and_alternatives(minimal_system):
-    """Phase 9: compact summary should explain the winner against nearby alternatives."""
+    """Phase 18: compact summary should reflect the single maintained trial."""
     import calibrate as calibrate_module
 
     system, S2, edges_S2, nodes_total = minimal_system
@@ -147,178 +147,31 @@ def test_report_summary_exposes_selected_and_alternatives(minimal_system):
 
         assert summary == written
         assert artifact_path.exists()
-        assert summary["selection_policy"]["strategy"] == "hybrid"
+        assert summary["selection_policy"]["strategy"] == "single_trial"
         assert summary["selected_trial"]["trial_number"] == system.calibration_report_["selected_trial_number"]
         assert "thresholds" in summary["selected_trial"]
-        assert len(summary["alternatives"]) <= 2
-        assert summary["alternatives"]
-        for alternative in summary["alternatives"]:
-            assert "delta_vs_selected" in alternative
-            assert "behavior" in alternative
-            assert "positive_predictions" in alternative["behavior"]
-            assert "amr_usage_rate" in alternative["behavior"]
-            assert "stage3_usage_rate" in alternative["behavior"]
+        assert summary["alternatives"] == []
     finally:
         artifact_path.unlink(missing_ok=True)
 
 
-def test_secondary_metric_breaks_primary_score_ties(minimal_system, monkeypatch):
-    """Phase 8: tied primary scores should be resolved by a smooth secondary metric."""
-    import calibrate as calibrate_module
-
-    system, S2, edges_S2, nodes_total = minimal_system
-    base_labels = S2["label"].to_numpy(dtype=np.float64)
-    base_probs = np.where(base_labels > 0.5, 0.7, 0.3)
-
-    def tied_predict_system(sys_obj, df, edges_df, nodes_total=None):
-        shift = (
-            sys_obj.th.s1_bot
-            + sys_obj.th.s2a_bot
-            + sys_obj.th.s12_bot
-            + sys_obj.th.novelty_force_stage3
-        )
-        offset = ((shift * 1000.0) % 17.0 - 8.0) * 0.005
-        p_final = np.clip(base_probs + offset, 0.0, 1.0)
-        n = len(df)
-        return pd.DataFrame(
-            {
-                "p_final": p_final,
-                "amr_used": np.zeros(n, dtype=np.int64),
-                "stage3_used": np.zeros(n, dtype=np.int64),
-            }
-        )
-
-    monkeypatch.setattr(calibrate_module, "predict_system", tied_predict_system)
-    calibrate_module.calibrate_thresholds(system, S2, edges_S2, nodes_total, metric="f1", n_trials=12, seed=42)
-    report = system.calibration_report_
-
-    best_trials = [
-        trial
-        for trial in report["trials"]
-        if abs(trial["primary_score"] - report["best_primary_score"]) <= 1e-12
-    ]
-    assert len(best_trials) > 1
-    best_log_loss = min(trial["secondary_log_loss"] for trial in best_trials)
-    selected = next(
-        trial for trial in report["trials"] if trial["trial_number"] == report["selected_trial_number"]
-    )
-    assert selected["secondary_log_loss"] == best_log_loss
-
-
-def test_plateau_guardrail_can_stop_early(minimal_system, monkeypatch):
-    """Phase 8: clearly flat searches should stop early instead of exhausting all trials."""
-    import calibrate as calibrate_module
-
+def test_calibration_report_is_single_trial_even_when_more_trials_requested(minimal_system):
+    """Phase 18: maintained calibration ignores higher requested trial counts."""
+    calibrate_thresholds = _import_calibrate()
     system, S2, edges_S2, nodes_total = minimal_system
 
-    def flat_predict_system(sys_obj, df, edges_df, nodes_total=None):
-        n = len(df)
-        return pd.DataFrame(
-            {
-                "p_final": np.full(n, 0.5, dtype=np.float64),
-                "amr_used": np.zeros(n, dtype=np.int64),
-                "stage3_used": np.zeros(n, dtype=np.int64),
-            }
-        )
-
-    monkeypatch.setattr(calibrate_module, "predict_system", flat_predict_system)
-    calibrate_module.calibrate_thresholds(system, S2, edges_S2, nodes_total, metric="f1", n_trials=40, seed=42)
+    calibrate_thresholds(system, S2, edges_S2, nodes_total, metric="f1", n_trials=40, seed=42)
     report = system.calibration_report_
 
-    assert report["stopped_early"] is True
-    assert report["executed_trials"] < report["requested_trials"]
-    assert report["best_tie_count"] == report["executed_trials"]
-
-
-def test_lstm_stage2b_refiner_is_seed_reproducible(minimal_lstm_stage2b_inputs):
-    """Phase 8: LSTM Stage 2b prototype should train deterministically under a fixed seed."""
-    sequences = minimal_lstm_stage2b_inputs["sequences"]
-    lengths = minimal_lstm_stage2b_inputs["lengths"]
-    z_base = minimal_lstm_stage2b_inputs["z_base"]
-    y = minimal_lstm_stage2b_inputs["y"]
-
-    refiner_a = Stage2LSTMRefiner(hidden_dim=12, epochs=15, random_state=42)
-    refiner_b = Stage2LSTMRefiner(hidden_dim=12, epochs=15, random_state=42)
-
-    refiner_a.fit(sequences, lengths, z_base, y)
-    refiner_b.fit(sequences, lengths, z_base, y)
-
-    refined_a = refiner_a.refine(z_base, sequences, lengths)
-    refined_b = refiner_b.refine(z_base, sequences, lengths)
-    assert np.allclose(refined_a, refined_b), "LSTM Stage 2b prototype must be deterministic for the same seed"
-
-
-def test_lstm_stage2b_refiner_preserves_z2_contract_with_zero_history(minimal_lstm_stage2b_inputs):
-    """Phase 8: LSTM Stage 2b prototype must return stable refined logits even with zero-history rows."""
-    sequences = minimal_lstm_stage2b_inputs["sequences"].copy()
-    lengths = minimal_lstm_stage2b_inputs["lengths"].copy()
-    z_base = minimal_lstm_stage2b_inputs["z_base"]
-    y = minimal_lstm_stage2b_inputs["y"]
-
-    refiner = Stage2LSTMRefiner(hidden_dim=12, epochs=15, random_state=42)
-    refiner.fit(sequences, lengths, z_base, y)
-
-    lengths[0] = 0
-    sequences[0] = 0.0
-    refined = refiner.refine(z_base, sequences, lengths)
-
-    assert refined.shape == z_base.shape
-    assert np.isfinite(refined).all()
-    assert refined.dtype == np.float64
-
-
-def test_train_system_rejects_unknown_stage2b_variant(synthetic_training_split):
-    """Phase 9: training should fail fast on unsupported Stage 2b variants."""
-    with pytest.raises(ValueError, match="Unknown stage2b variant"):
-        bp.train_system(
-            synthetic_training_split["S1"],
-            synthetic_training_split["S2"],
-            synthetic_training_split["edges_S1"],
-            synthetic_training_split["edges_S2"],
-            synthetic_training_split["cfg"],
-            synthetic_training_split["th"],
-            nodes_total=synthetic_training_split["nodes_total"],
-            stage2b_variant="invalid",
-        )
-
-
-def test_train_system_records_requested_lstm_variant(monkeypatch, synthetic_training_split):
-    """Phase 9: training should record the explicit LSTM Stage 2b choice in the system state."""
-
-    class TestEmbedder:
-        def encode(self, texts, batch_size: int = 64) -> np.ndarray:
-            rng = np.random.RandomState(42)
-            return rng.randn(len(texts), 384).astype(np.float32)
-
-    monkeypatch.setattr(bp, "TextEmbedder", lambda *args, **kwargs: TestEmbedder())
-
-    system = bp.train_system(
-        synthetic_training_split["S1"],
-        synthetic_training_split["S2"],
-        synthetic_training_split["edges_S1"],
-        synthetic_training_split["edges_S2"],
-        synthetic_training_split["cfg"],
-        synthetic_training_split["th"],
-        random_state=42,
-        nodes_total=synthetic_training_split["nodes_total"],
-        stage2b_variant="lstm",
-    )
-
-    assert system.stage2b_variant == "lstm"
-    assert system.stage2b_lstm is not None
-    assert system.amr_refiner is None
+    assert report["requested_trials"] == 1
+    assert report["executed_trials"] == 1
+    assert report["stopped_early"] is False
+    assert report["best_tie_count"] == 1
 
 
 def test_predict_system_uses_amr_branch_when_configured(minimal_system, monkeypatch):
     """Phase 9: prediction should honor the explicit AMR branch and ignore any LSTM object."""
     system, S2, edges_S2, nodes_total = minimal_system
-    system.stage2b_variant = "amr"
-
-    class UnexpectedLSTM:
-        def refine(self, z_base, sequences, lengths):
-            raise AssertionError("LSTM branch should not run when stage2b_variant='amr'")
-
-    system.stage2b_lstm = UnexpectedLSTM()
     calls = {"amr": 0}
     original_refine = system.amr_refiner.refine
 
@@ -332,47 +185,5 @@ def test_predict_system_uses_amr_branch_when_configured(minimal_system, monkeypa
     results = bp.predict_system(system, S2, edges_S2, nodes_total)
 
     assert calls["amr"] == 1
-    assert results["amr_used"].eq(1).all()
-    assert {"p1", "p2", "p12", "p_final", "stage3_used"}.issubset(results.columns)
-
-
-def test_predict_system_uses_lstm_branch_when_configured(minimal_lstm_stage2b_inputs, monkeypatch):
-    """Phase 9: prediction should honor the explicit LSTM branch and fail closed on AMR fallback."""
-    system = minimal_lstm_stage2b_inputs["system"]
-    system.cfg = minimal_lstm_stage2b_inputs["cfg"]
-    system.stage2b_variant = "lstm"
-
-    refiner = Stage2LSTMRefiner(hidden_dim=12, epochs=15, random_state=42)
-    refiner.fit(
-        minimal_lstm_stage2b_inputs["sequences"],
-        minimal_lstm_stage2b_inputs["lengths"],
-        minimal_lstm_stage2b_inputs["z_base"],
-        minimal_lstm_stage2b_inputs["y"],
-    )
-    system.stage2b_lstm = refiner
-
-    class UnexpectedAMR:
-        def refine(self, z_base, h_amr):
-            raise AssertionError("AMR branch should not run when stage2b_variant='lstm'")
-
-    system.amr_refiner = UnexpectedAMR()
-    calls = {"lstm": 0}
-    original_refine = refiner.refine
-
-    def tracked_refine(z_base, sequences, lengths):
-        calls["lstm"] += 1
-        return original_refine(z_base, sequences, lengths)
-
-    monkeypatch.setattr(refiner, "refine", tracked_refine)
-    monkeypatch.setattr(bp, "gate_amr", lambda p2a, n2, z1, z2a, th: np.ones_like(p2a, dtype=bool))
-
-    results = bp.predict_system(
-        system,
-        minimal_lstm_stage2b_inputs["S2"],
-        minimal_lstm_stage2b_inputs["edges_S2"],
-        minimal_lstm_stage2b_inputs["nodes_total"],
-    )
-
-    assert calls["lstm"] == 1
     assert results["amr_used"].eq(1).all()
     assert {"p1", "p2", "p12", "p_final", "stage3_used"}.issubset(results.columns)

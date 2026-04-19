@@ -7,18 +7,18 @@ import sys
 import joblib
 import pandas as pd
 
-from botdetector_pipeline import predict_system
+from cascade_pipeline import CascadePipeline
 from evaluate import evaluate_s3
-from train_twibot20 import (
-    DEFAULT_NATIVE_MODEL_PATH,
+from train_twibot import (
+    DEFAULT_TWIBOT_MODEL_PATH,
     PHASE15_ARTIFACT_DIR,
     load_accounts_with_ids,
-    native_feature_overrides,
 )
 from twibot20_io import build_edges
 
 DEFAULT_RESULTS_FILENAME = "results_twibot20_native.json"
 DEFAULT_METRICS_FILENAME = "metrics_twibot20_native.json"
+DEFAULT_NATIVE_MODEL_PATH = DEFAULT_TWIBOT_MODEL_PATH
 
 
 def _save_json(payload: dict | list[dict], path: str) -> None:
@@ -33,14 +33,13 @@ def run_inference_native(
     accounts_df = load_accounts_with_ids(path)
     edges_df = build_edges(accounts_df, path)
     system = joblib.load(model_path)
-
-    with native_feature_overrides():
-        return predict_system(
-            system,
-            df=accounts_df,
-            edges_df=edges_df,
-            nodes_total=len(accounts_df),
-        )
+    pipeline = CascadePipeline("twibot", cfg=system.cfg, embedder=system.embedder)
+    return pipeline.predict(
+        system,
+        df=accounts_df,
+        edges_df=edges_df,
+        nodes_total=len(accounts_df),
+    )
 
 
 def evaluate_twibot20_native(

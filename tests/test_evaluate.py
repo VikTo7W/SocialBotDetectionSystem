@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from cascade_pipeline import CascadePipeline
 from evaluate import compare_stage2b_variants, evaluate_s3
 
 
@@ -261,6 +262,18 @@ class TestIntegrationWithMinimalSystem:
         routing = report["routing"]
         total = routing["pct_stage1_exit"] + routing["pct_stage2_exit"] + routing["pct_stage3_exit"]
         assert abs(total - 100.0) < 0.01, f"Exit percentages sum to {total:.4f}"
+
+    def test_shared_pipeline_predict_matches_wrapper(self, minimal_system):
+        from botdetector_pipeline import predict_system
+
+        system, S2, edges_S2, nodes_total = minimal_system
+        pipeline = CascadePipeline("botsim", cfg=system.cfg, embedder=system.embedder)
+
+        direct = pipeline.predict(system, S2, edges_S2, nodes_total=nodes_total)
+        wrapped = predict_system(system, S2, edges_S2, nodes_total)
+
+        assert direct["account_id"].tolist() == wrapped["account_id"].tolist()
+        assert np.allclose(direct["p_final"].to_numpy(), wrapped["p_final"].to_numpy())
 
 
 class TestStage2BVariantComparison:
