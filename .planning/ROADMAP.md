@@ -183,7 +183,13 @@ Plans:
   3. eval_twibot_native.py evaluates the TwiBot-trained model on TwiBot-20 test data and produces the same output format
   4. Every evaluation entry point writes a confusion matrix image file and a routing statistics / per-stage metric table in the existing paper format
   5. The Reddit-transfer-vs-native comparison artifact (Table 5) is generated from the outputs of EVAL-02 and EVAL-03 without manual steps
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 20-01-PLAN.md - Wave 0 red-test scaffolding for the three evaluation entry points, the Table 5 driver, and a one-line import fix that unblocks `test_ablation_tables.py` collection (EVAL-01, EVAL-02, EVAL-03, PAPER-01, PAPER-02, PAPER-03)
+- [ ] 20-02-PLAN.md - Build `eval_botsim_native.py` as the maintained EVAL-01 entry point, reconstructing the SEED=42 S3 split and writing `paper_outputs/metrics_botsim.json` and `paper_outputs/confusion_matrix_botsim.png` (EVAL-01, PAPER-01, PAPER-02)
+- [ ] 20-03-PLAN.md - Build `eval_reddit_twibot_transfer.py` as the maintained EVAL-02 entry point using a DataFrame-rewrite transfer adapter (no monkey-patching) and writing `paper_outputs/metrics_reddit_transfer.json` and `paper_outputs/confusion_matrix_reddit_transfer.png` (EVAL-02, PAPER-01, PAPER-02)
+- [ ] 20-04-PLAN.md - Build `eval_twibot_native.py` as the maintained EVAL-03 entry point routed through `CascadePipeline('twibot')` and writing `paper_outputs/metrics_twibot_native.json` and `paper_outputs/confusion_matrix_twibot_native.png` (EVAL-03, PAPER-01, PAPER-02)
+- [ ] 20-05-PLAN.md - Build `generate_table5.py` as the standalone PAPER-03 Table 5 driver that reads the three `paper_outputs/*.json` files and writes `tables/table5_cross_dataset.tex`, plus phase-level verification (PAPER-03)
 **UI hint**: no
 
 ### Phase 21: Documentation
@@ -220,5 +226,5 @@ Plans:
 | 17. Shared Feature Extraction Module | v1.5 | 6/6 | Complete | 2026-04-19 |
 | 18. Unified Cascade Pipeline and Calibration | v1.5 | 4/4 | Complete | 2026-04-19 |
 | 19. Training Entry Points and Fresh Model Retraining | v1.5 | 0/4 | Planned | - |
-| 20. Evaluation Entry Points and Paper Outputs | v1.5 | 0/? | Not started | - |
+| 20. Evaluation Entry Points and Paper Outputs | v1.5 | 0/5 | Planned | - |
 | 21. Documentation | v1.5 | 0/? | Not started | - |
