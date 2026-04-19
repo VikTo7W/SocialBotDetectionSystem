@@ -2,144 +2,320 @@
 
 ## Overview
 
-A three-stage cascade classifier for social bot detection with metadata,
-content/temporal, and graph stages. The original system was trained on the
-BotSim-24 Reddit dataset; v1.4 adds a Twitter-native TwiBot-20 baseline so the
-repo can compare:
+This repository contains a staged cascade for social bot detection with a single maintained v1.5 codebase shared across two datasets:
 
-- Reddit-trained cascade on TwiBot-20 (`trained_system_v12.joblib`)
-- TwiBot-trained cascade on TwiBot-20 (`trained_system_twibot20.joblib`)
+- BotSim-24 for Reddit-native training and evaluation
+- TwiBot-20 for zero-shot transfer and TwiBot-native training/evaluation
 
-The maintained paper-facing comparison is no longer "static vs recalibrated"
-Reddit transfer. That older Phase 12 evidence remains archived for provenance,
-but the active v1.4 story is Reddit transfer vs TwiBot-native supervised
-performance.
+The maintained system is organized around shared feature extractors, a shared cascade pipeline, clean training/evaluation entry points, and paper-output scripts. The cascade routes each account through progressively more expensive evidence sources:
 
-## Environment Assumptions
+1. Stage 1: account-level metadata and activity signals
+2. Stage 2a: text/content and timeline behavior
+3. Stage 2b: AMR-style semantic refinement as a delta on the Stage 2a logit
+4. Stage 3: graph structure features
+5. Meta-learners and threshold calibration: combine stage outputs into one final bot probability
 
-- Python: CPython 3.13
-- Key dependencies: `scikit-learn`, `lightgbm`, `sentence-transformers`,
-  `torch`, `joblib`, `numpy`, `pandas`
-- Deterministic seed: `SEED=42`
-- OS: Windows 10 was the packaging environment
+The maintained v1.5 entry points are:
 
-## Required Inputs
+- `train_botsim.py`
+- `train_twibot.py`
+- `eval_botsim_native.py`
+- `eval_reddit_twibot_transfer.py`
+- `eval_twibot_native.py`
+- `generate_table5.py`
 
-For the maintained Phase 16 comparison flow:
+## Architecture
 
-- `test.json` — TwiBot-20 test split
-- `trained_system_v12.joblib` — Reddit-trained transfer baseline artifact
-- `trained_system_twibot20.joblib` — TwiBot-native supervised artifact
+### Core modules
 
-Optional but useful when regenerating native artifacts from scratch:
+- `features/stage1.py`: shared Stage 1 extractor for `botsim` and `twibot`
+- `features/stage2.py`: shared Stage 2a text/behavior extractor and Stage 2b AMR embedding extractor
+- `features/stage3.py`: shared graph-structure extractor
+- `cascade_pipeline.py`: maintained fit/predict orchestration for the whole cascade
+- `data_io.py`: shared dataset-aware loading helpers
+- `evaluate.py`: shared evaluation helper that computes overall, per-stage, and routing metrics
 
-- `train.json`
-- `dev.json`
+### Entry points
 
-For the full `ablation_tables.py` run, the repo-root BotSim-24 assets are still
-needed:
+- `train_botsim.py`: trains the Reddit/BotSim cascade and writes `trained_system_botsim.joblib`
+- `train_twibot.py`: trains the TwiBot-native cascade and writes `trained_system_twibot.joblib`
+- `eval_botsim_native.py`: evaluates the Reddit-trained model on BotSim-24
+- `eval_reddit_twibot_transfer.py`: evaluates the Reddit-trained model on TwiBot-20 in transfer mode
+- `eval_twibot_native.py`: evaluates the TwiBot-trained model on TwiBot-20
+- `generate_table5.py`: builds `tables/table5_cross_dataset.tex` from the maintained `paper_outputs/*.json`
+
+### Compatibility layer
+
+`botdetector_pipeline.py` still contains the underlying stage-model classes and compatibility helpers used by the shared pipeline, but it is no longer the main maintained orchestration surface. New work should be routed through `CascadePipeline`.
+
+## Technique Rationale
+
+### LightGBM stage models
+
+LightGBM is used for the stage classifiers because the inputs are tabular, heterogeneous, and mix dense embeddings with hand-engineered features. It gives strong performance without forcing the whole system into a single opaque neural pipeline.
+
+### Mahalanobis novelty scores
+
+Each stage carries a novelty signal so routing can react not just to confidence, but also to whether an account looks out-of-distribution for that stage. This matters especially for transfer from Reddit to Twitter, where a model can be overconfident on unfamiliar structure.
+
+### AMR delta-logit refinement
+
+Stage 2b does not replace Stage 2a with a second classifier. Instead, it learns a correction to the Stage 2a logit when the account looks uncertain, novel, or contradictory enough to justify a semantic second look. In v1.5 the maintained path is AMR embedding delta-logit only; the older LSTM variant is removed.
+
+### Logistic-regression stackers
+
+The cascade uses logistic regression for `meta12` and `meta123` because the stacking sets are smaller than the base-model training sets and the combiner should stay interpretable. This keeps the final probability grounded in simple stage-level evidence rather than another large flexible model.
+
+### Bayesian threshold calibration
+
+The system trains probabilistic models and then calibrates the routing/decision thresholds separately. This keeps model fitting and operating-point selection decoupled. In v1.5 the maintained calibration contract is a single trial, not the older multi-restart loop.
+
+## Dataset And Stage Mapping
+
+The codebase uses one extractor package with a `dataset` parameter. The exact signals differ by dataset because the source data differs.
+
+### BotSim-24
+
+#### Stage 1
+
+BotSim Stage 1 uses compact Reddit/account activity signals from `features/stage1.py`:
+
+- username length
+- submission count
+- first and second comment counts
+- total comment count
+- subreddit count
+- submission-to-comment and submission-to-subreddit ratios
+
+This stage is cheap and acts as the first routing screen.
+
+#### Stage 2a
+
+BotSim Stage 2a combines pooled text embeddings with simple message-level behavior and temporal signals from `features/stage2.py`:
+
+- pooled sentence-transformer embeddings over recent messages
+- mean linguistic features such as text length, token uniqueness, punctuation ratio, and digit ratio
+- posting-rate and inter-arrival statistics when timestamps exist
+- hour-of-day entropy
+- cross-message similarity and near-duplicate fraction
+
+This stage captures content style and activity patterns beyond raw account metadata.
+
+#### Stage 2b
+
+BotSim Stage 2b uses the shared AMR embedding extraction path:
+
+- one semantic anchor embedding per account
+- learned delta-logit refinement applied only to gated accounts
+
+It exists to refine uncertain Stage 2a cases rather than score every account independently.
+
+#### Stage 3
+
+BotSim Stage 3 uses graph features over filtered split-local edges from `features/stage3.py`:
+
+- in-degree and out-degree
+- weighted in/out totals
+- per-edge-type degree and weight features
+
+This stage is reserved for the hardest accounts because graph computation is more expensive and only needed when earlier evidence is insufficient.
+
+### TwiBot-20
+
+#### Stage 1
+
+TwiBot Stage 1 uses Twitter-native metadata and lightweight activity summaries from `features/stage1.py`:
+
+- screen-name length
+- screen-name digit ratio
+- statuses, followers, and friends counts
+- follower/friend ratio
+- account age and statuses per day
+- tweet count loaded
+- domain count
+- retweet, modified-tweet, and original fractions
+- count of unique RT/MT targets
+
+This is intentionally Twitter-native rather than a fake Reddit column mapping.
+
+#### Stage 2a
+
+TwiBot Stage 2a uses pooled message embeddings plus per-message statistics from the same shared extractor:
+
+- pooled sentence-transformer embeddings
+- mean text-length, token-uniqueness, punctuation-ratio, and digit-ratio features
+- message count
+- message-length variance
+- cross-message similarity
+- near-duplicate fraction
+- non-empty message fraction
+
+Unlike BotSim, this path does not rely on Reddit-style timestamp-derived temporal features when that information is absent or structurally different.
+
+#### Stage 2b
+
+TwiBot Stage 2b is the same maintained AMR embedding delta-logit contract:
+
+- semantic anchor embedding from the shared extractor
+- gated correction to Stage 2a logits
+
+There is no maintained LSTM Stage 2b path in v1.5.
+
+#### Stage 3
+
+TwiBot Stage 3 uses graph features from the follower/following graph:
+
+- in-degree and out-degree
+- weighted totals
+- per-edge-type degree and weight features for following/follower relations
+
+The extractor stays shared, but the underlying edge semantics reflect the Twitter graph rather than Reddit interaction tensors.
+
+### Transfer-specific note
+
+`eval_reddit_twibot_transfer.py` adapts TwiBot accounts into the minimum BotSim-style Stage 1/2a surface needed by the Reddit-trained model. That adapter exists only for evaluation of the transfer baseline. It is not the maintained feature definition for TwiBot-native training.
+
+## Training And Evaluation Flow
+
+### Training
+
+- `train_botsim.py` loads BotSim-24, creates S1/S2/S3 splits, trains the shared cascade, calibrates thresholds, and writes `trained_system_botsim.joblib`
+- `train_twibot.py` loads TwiBot-20 `train/dev/test`, trains the shared cascade, calibrates on `dev.json`, and writes `trained_system_twibot.joblib`
+
+### Evaluation
+
+- `eval_botsim_native.py` writes:
+  - `paper_outputs/metrics_botsim.json`
+  - `paper_outputs/confusion_matrix_botsim.png`
+- `eval_reddit_twibot_transfer.py` writes:
+  - `paper_outputs/metrics_reddit_transfer.json`
+  - `paper_outputs/confusion_matrix_reddit_transfer.png`
+- `eval_twibot_native.py` writes:
+  - `paper_outputs/metrics_twibot_native.json`
+  - `paper_outputs/confusion_matrix_twibot_native.png`
+- `generate_table5.py` reads the three metrics JSON files and writes:
+  - `tables/table5_cross_dataset.tex`
+
+The shared `evaluate.py` helper reports:
+
+- `overall`
+- `per_stage`
+- `routing`
+
+## Data Requirements
+
+### BotSim-24
+
+Required for BotSim training/evaluation:
 
 - `Users.csv`
 - `user_post_comment.json`
 - `edge_index.pt`
 - `edge_type.pt`
 - `edge_weight.pt`
-- `results_v10.json`
+
+### TwiBot-20
+
+Required for TwiBot training/evaluation:
+
+- `train.json`
+- `dev.json`
+- `test.json`
 
 ## Reproduction Guide
 
-### Step 1 — Confirm the model artifacts and TwiBot test split are present
+### 1. Train the maintained BotSim artifact
 
 ```bash
-ls test.json trained_system_v12.joblib trained_system_twibot20.joblib
+python train_botsim.py
 ```
 
-### Step 2 — Generate the maintained Reddit-transfer baseline artifacts
+Expected artifact:
+
+- `trained_system_botsim.joblib`
+
+### 2. Train the maintained TwiBot artifact
 
 ```bash
-python evaluate_twibot20.py test.json trained_system_v12.joblib \
-  .planning/phases/16-comparative-paper-outputs-and-reddit-cleanup/artifacts
+python train_twibot.py
 ```
 
-This writes:
+Expected artifact:
 
-- `.planning/phases/16-comparative-paper-outputs-and-reddit-cleanup/artifacts/results_twibot20_reddit_transfer.json`
-- `.planning/phases/16-comparative-paper-outputs-and-reddit-cleanup/artifacts/metrics_twibot20_reddit_transfer.json`
+- `trained_system_twibot.joblib`
 
-### Step 3 — Generate the TwiBot-native evaluation artifacts
-
-If the Phase 15 native metrics are not already present, run:
+### 3. Evaluate the Reddit-trained model on BotSim-24
 
 ```bash
-python evaluate_twibot20_native.py test.json trained_system_twibot20.joblib \
-  .planning/phases/15-twibot-cascade-training-and-evaluation/artifacts
+python eval_botsim_native.py
 ```
 
-This writes:
+Expected outputs:
 
-- `.planning/phases/15-twibot-cascade-training-and-evaluation/artifacts/results_twibot20_native.json`
-- `.planning/phases/15-twibot-cascade-training-and-evaluation/artifacts/metrics_twibot20_native.json`
+- `paper_outputs/metrics_botsim.json`
+- `paper_outputs/confusion_matrix_botsim.png`
 
-### Step 4 — Regenerate the paper-facing comparison and Table 5 outputs
+### 4. Evaluate the Reddit-trained model on TwiBot-20 transfer
 
 ```bash
-python ablation_tables.py
+python eval_reddit_twibot_transfer.py
 ```
 
-This writes:
+Expected outputs:
 
-- `.planning/phases/16-comparative-paper-outputs-and-reddit-cleanup/artifacts/metrics_twibot20_reddit_vs_native.json`
+- `paper_outputs/metrics_reddit_transfer.json`
+- `paper_outputs/confusion_matrix_reddit_transfer.png`
+
+### 5. Evaluate the TwiBot-trained model on TwiBot-20 native
+
+```bash
+python eval_twibot_native.py
+```
+
+Expected outputs:
+
+- `paper_outputs/metrics_twibot_native.json`
+- `paper_outputs/confusion_matrix_twibot_native.png`
+
+### 6. Generate Table 5
+
+```bash
+python generate_table5.py
+```
+
+Expected output:
+
 - `tables/table5_cross_dataset.tex`
-- `tables/table5_transfer_interpretation.txt`
 
-## Environment Overrides
+## Current Output Status
 
-`ablation_tables.py` supports the following overrides:
+Confirmed present in this workspace now:
 
-- `TWIBOT_COMPARISON_PATH` — override the Phase 16 Reddit-vs-native comparison artifact path
-- `TWIBOT_REDDIT_METRICS_PATH` — override the Reddit-transfer metrics path
-- `TWIBOT_NATIVE_METRICS_PATH` — override the TwiBot-native metrics path
-- `TABLE5_OUTPUT_PATH` — override where `table5_cross_dataset.tex` is written
-- `TABLE5_INTERPRETATION_PATH` — override where `table5_transfer_interpretation.txt` is written
+- `paper_outputs/metrics_botsim.json`
+- `paper_outputs/confusion_matrix_botsim.png`
+- `paper_outputs/metrics_reddit_transfer.json`
+- `paper_outputs/confusion_matrix_reddit_transfer.png`
 
-Example:
+Still blocked on the deferred fresh TwiBot artifact rerun:
 
-```bash
-TWIBOT_REDDIT_METRICS_PATH=/alt/reddit_metrics.json \
-TWIBOT_NATIVE_METRICS_PATH=/alt/native_metrics.json \
-TABLE5_OUTPUT_PATH=/alt/table5.tex \
-TABLE5_INTERPRETATION_PATH=/alt/table5_interpretation.txt \
-python ablation_tables.py
-```
+- `trained_system_twibot.joblib`
+- `paper_outputs/metrics_twibot_native.json`
+- `paper_outputs/confusion_matrix_twibot_native.png`
 
-## Expected Outputs
-
-The maintained v1.4 comparison flow produces:
-
-- `results_twibot20_reddit_transfer.json` — per-account Reddit-transfer outputs
-- `metrics_twibot20_reddit_transfer.json` — overall/per-stage/routing Reddit-transfer metrics
-- `results_twibot20_native.json` — per-account TwiBot-native outputs
-- `metrics_twibot20_native.json` — overall/per-stage/routing TwiBot-native metrics
-- `metrics_twibot20_reddit_vs_native.json` — machine-readable Reddit-vs-native comparison artifact
-- `tables/table5_cross_dataset.tex` — paper-ready cross-dataset comparison table
-- `tables/table5_transfer_interpretation.txt` — concise interpretation text for the comparison result
-
-Historical Phase 12 artifacts such as `metrics_twibot20_comparison.json` and
-`transfer_evidence_summary.json` remain archived for provenance, but they are no
-longer the maintained default comparison contract.
+Because of that missing local artifact, `eval_twibot_native.py` and `generate_table5.py` are correct maintained entry points but may still be blocked in this specific workspace until the TwiBot retraining run completes successfully.
 
 ## Known Caveats
 
-- Windows pytest temp-directory cleanup remains permission-sensitive in this environment. Production code is unaffected; the friction is in the test harness cleanup path.
-- The Reddit-trained transfer result is expected to remain weak on TwiBot-20. That weak transfer result is the baseline contrast that motivates the TwiBot-native model.
-- The Stage 2b AMR path is still the embedding-based proxy from v1.0, not true AMR graph parsing.
-- Multi-seed stability and alternate calibration approaches remain deferred.
+- Windows pytest temp-directory cleanup remains permission-sensitive in this workspace. The production code path is unaffected; the issue is in local test harness cleanup.
+- The Stage 2b AMR path is still an embedding-based proxy, not true AMR graph parsing.
+- Multi-seed stability and richer paper uncertainty analysis remain deferred.
+- The Reddit-to-TwiBot transfer result is expected to be much weaker than the TwiBot-native path; that gap is part of the research story, not a bug.
 
-## Known Limitations
+## Historical Notes
 
-- No realtime serving or dashboard UI
-- No online novelty recalibration in the maintained Reddit transfer path
-- No true AMR graph parsing yet
-- No confidence-interval / multi-seed paper analysis yet
+- Older duplicate evaluation scripts such as `evaluate_twibot20.py` and `evaluate_twibot20_native.py` are no longer part of the maintained surface.
+- Older artifact names such as `trained_system_v12.joblib` and `trained_system_twibot20.joblib` remain historical references only and should not be used for new reproduction instructions.
 
-See `VERSION.md` for the current release contract.
+## Release Contract
+
+See `VERSION.md` for the concise v1.5 release contract.

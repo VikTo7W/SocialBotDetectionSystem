@@ -18,7 +18,7 @@ Requires:
     - .planning/workstreams/stage2b-lstm-version/phases/10-evaluation-and-baseline-comparison/10-real-run-variant-comparison.json
     - results_v10.json (v1.0 S3 metrics from git worktree retrain)
     - Users.csv, user_post_comment.json, edge_index.pt, edge_type.pt, edge_weight.pt
-    - Phase 16 Reddit/native metrics or comparison artifact (run evaluate_twibot20.py and evaluate_twibot20_native.py first)
+    - Phase 20 maintained paper outputs (run eval_reddit_twibot_transfer.py and eval_twibot_native.py first)
 """
 
 import json
@@ -34,8 +34,8 @@ from sklearn.model_selection import train_test_split
 from botsim24_io import load_users_csv, load_user_post_comment_json, build_account_table
 from botdetector_pipeline import predict_system
 from evaluate import evaluate_s3
-from features_stage1 import extract_stage1_matrix as _orig_extract_stage1_matrix
-from main import filter_edges_for_split
+from features.stage1 import Stage1Extractor
+from train_botsim import filter_edges_for_split
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -396,10 +396,8 @@ def masked_predict(sys_obj, S3, edges_S3, nodes_total, mask_cols):
     """
     Run predict_system with specific Stage 1 feature columns zeroed at inference time.
 
-    Monkey-patches botdetector_pipeline.extract_stage1_matrix (the module-level
-    name binding created by `from features_stage1 import extract_stage1_matrix`
-    on line 14 of botdetector_pipeline.py). Patching features_stage1 directly
-    would have no effect because that import has already been bound.
+    Monkey-patches `botdetector_pipeline.extract_stage1_matrix` so the shared
+    pipeline sees a masked Stage 1 feature matrix at inference time.
 
     Args:
         sys_obj:     Trained system (TrainedSystem from botdetector_pipeline).
@@ -414,7 +412,7 @@ def masked_predict(sys_obj, S3, edges_S3, nodes_total, mask_cols):
     import botdetector_pipeline as bp
 
     def _masked_extract(df):
-        X = _orig_extract_stage1_matrix(df)
+        X = Stage1Extractor("botsim").extract(df)
         X = X.copy()
         X[:, mask_cols] = 0.0
         return X
@@ -439,7 +437,7 @@ def main():
         "10-evaluation-and-baseline-comparison/10-real-run-variant-comparison.json"
     )
 
-    # 1. Load data and reconstruct S3 split (identical to main.py)
+    # 1. Load data and reconstruct S3 split (same maintained BotSim split as train_botsim.py)
     users = load_users_csv("Users.csv")
     users["node_idx"] = np.arange(len(users), dtype=np.int32)
     users["user_id"] = users["user_id"].astype(str)
@@ -575,8 +573,8 @@ def main():
     else:
         print(f"\n[SKIP] Table 5: {metrics_twibot20_path} not found.")
         print(
-            "Run 'python evaluate_twibot20.py' and "
-            "'python evaluate_twibot20_native.py' first to generate Reddit-transfer "
+            "Run 'python eval_reddit_twibot_transfer.py' and "
+            "'python eval_twibot_native.py' first to generate Reddit-transfer "
             "and TwiBot-native metrics."
         )
         print("\n4 tables exported to tables/*.tex (Table 5 skipped)")

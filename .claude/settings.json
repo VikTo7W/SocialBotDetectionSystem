@@ -26,7 +26,17 @@
       "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs init phase-op 17)",
       "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs commit 'docs\\(17\\): research phase domain' --files .planning/phases/17-shared-feature-extraction-module/17-RESEARCH.md)",
       "Read(//c/Users/dzeni/.claude/get-shit-done/templates/**)",
-      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs init plan-phase 17)"
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs init plan-phase 17)",
+      "Bash(python -m pip show matplotlib seaborn scikit-learn)",
+      "Bash(python -m pytest tests/test_evaluate.py tests/test_evaluate_twibot20_native.py -x -q)",
+      "Bash(python -m pytest tests/ -x -q)",
+      "Bash(python -m pytest tests/ --ignore=tests/test_ablation_tables.py -x -q)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs commit 'docs\\(20\\): research phase domain' --files .planning/phases/20-evaluation-entry-points-and-paper-outputs/20-RESEARCH.md)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs frontmatter validate .planning/phases/20-evaluation-entry-points-and-paper-outputs/20-02-PLAN.md --schema plan)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs frontmatter validate .planning/phases/20-evaluation-entry-points-and-paper-outputs/20-03-PLAN.md --schema plan)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs frontmatter validate .planning/phases/20-evaluation-entry-points-and-paper-outputs/20-04-PLAN.md --schema plan)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs verify plan-structure .planning/phases/20-evaluation-entry-points-and-paper-outputs/20-04-PLAN.md)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs verify plan-structure .planning/phases/20-evaluation-entry-points-and-paper-outputs/20-05-PLAN.md)"
     ]
   }
 }

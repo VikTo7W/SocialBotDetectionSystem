@@ -9,40 +9,12 @@ import joblib
 from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel, Field
 
-import botdetector_pipeline as bp
 from botdetector_pipeline import predict_system
-from features_stage1 import extract_stage1_matrix
-from features_stage2 import extract_stage2_features
-
-# ---------------------------------------------------------------------------
-# Calling convention patch
-# predict_system() internally calls:
-#   extract_stage1_matrix(df, cfg)           -- BUG: real sig is (df)
-#   extract_stage2_features(df, cfg, embedder) -- BUG: real sig is (df, embedder)
-# We patch the module-level names so predict_system() finds the patched versions.
-# ---------------------------------------------------------------------------
-_original_s1 = extract_stage1_matrix
-_original_s2 = extract_stage2_features
-
-
-def _patched_s1(df, *args, **kwargs):
-    return _original_s1(df)
-
-
-def _patched_s2(df, *args, **kwargs):
-    for a in args:
-        if hasattr(a, "encode"):
-            return _original_s2(df, a)
-    return _original_s2(df, kwargs.get("embedder"))
-
-
-bp.extract_stage1_matrix = _patched_s1
-bp.extract_stage2_features = _patched_s2
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-MODEL_PATH = os.environ.get("MODEL_PATH", "trained_system.joblib")
+MODEL_PATH = os.environ.get("MODEL_PATH", "trained_system_botsim.joblib")
 
 EMPTY_EDGES = pd.DataFrame({
     "src": pd.array([], dtype=np.int32),

@@ -52,9 +52,15 @@ from cascade_pipeline import (
 # re-export build_graph_features_nodeidx for callers that still import it here
 from features.stage3 import build_graph_features_nodeidx  # noqa: F401
 
-# legacy stubs kept for compatibility with the old preprocessing path
-from features_stage1 import extract_stage1_matrix  # noqa: F401
-from features_stage2 import extract_stage2_features  # noqa: F401
+# legacy stubs kept for compatibility with callers that access bp.extract_stage1_matrix
+def extract_stage1_matrix(df: pd.DataFrame) -> np.ndarray:
+    from features.stage1 import Stage1Extractor
+    return Stage1Extractor("botsim").extract(df)
+
+
+def extract_stage2_features(df: pd.DataFrame, embedder, max_msgs: int = 50) -> np.ndarray:
+    from features.stage2 import Stage2Extractor
+    return Stage2Extractor("botsim").extract(df, embedder, max_msgs=max_msgs)
 
 
 # ---------------------------------------------------------------------------

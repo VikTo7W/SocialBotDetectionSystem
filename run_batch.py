@@ -1,7 +1,7 @@
 """
 run_batch.py — Batch inference on a custom dataset using a trained system.
 
-Load trained_system.joblib (produced by main.py), provide your own account
+Load a trained system artifact such as `trained_system_botsim.joblib`, provide your own account
 DataFrame, and get per-account bot probabilities.
 
 Unlike the API (which takes one account at a time as JSON), this script
@@ -245,8 +245,8 @@ def load_from_csv(path: str) -> pd.DataFrame:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Batch bot detection inference")
     parser.add_argument(
-        "--model", default="trained_system.joblib",
-        help="Path to trained_system.joblib (default: trained_system.joblib)"
+        "--model", default="trained_system_botsim.joblib",
+        help="Path to a trained system artifact (default: trained_system_botsim.joblib)"
     )
     parser.add_argument(
         "--csv", default=None,
@@ -266,7 +266,7 @@ def main() -> None:
     model_path = Path(args.model)
     if not model_path.exists():
         print(f"ERROR: model file not found: {model_path}")
-        print("Run main.py first to train and save the system.")
+        print("Run train_botsim.py or train_twibot.py first to create a maintained model artifact.")
         sys.exit(1)
 
     print(f"Loading model from {model_path} ...")

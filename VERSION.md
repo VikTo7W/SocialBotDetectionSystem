@@ -2,119 +2,105 @@
 
 ## System Version
 
-v1.4 - Twitter-Native Supervised Baseline
+v1.5 - Unified Modular Codebase
 
-Packaged on 2026-04-18. The maintained release contract now includes two
-distinct TwiBot-20 evaluation artifacts:
+Packaged on 2026-04-19. The maintained release contract is now a single dataset-parameterized codebase with shared feature extraction, shared cascade orchestration, maintained train/eval entry points, and paper-output generation rooted at `paper_outputs/` and `tables/`.
 
-- Reddit-trained transfer baseline: `trained_system_v12.joblib`
-- TwiBot-native supervised baseline: `trained_system_twibot20.joblib`
+## Maintained Model Artifacts
 
-The active comparison story is Reddit transfer vs TwiBot-native performance on
-the TwiBot-20 test split. The older static-vs-recalibrated Reddit transfer
-evidence from Phase 12 remains archived for provenance only.
+### BotSim / Reddit-native artifact
 
-## Model Artifacts
+- Artifact: `trained_system_botsim.joblib`
+- Training entry point: `train_botsim.py`
+- Evaluation entry point: `eval_botsim_native.py`
+- Purpose: train and evaluate the Reddit/BotSim cascade on BotSim-24
 
-### Reddit transfer baseline
+### TwiBot-native artifact
 
-- Artifact: `trained_system_v12.joblib`
-- Entry point: `evaluate_twibot20.py`
-- Purpose: run the BotSim-24-trained cascade on TwiBot-20 without retraining
+- Artifact: `trained_system_twibot.joblib`
+- Training entry point: `train_twibot.py`
+- Evaluation entry point: `eval_twibot_native.py`
+- Purpose: train and evaluate the TwiBot-native cascade on TwiBot-20
 
-### TwiBot-native supervised baseline
+## Maintained Evaluation Surface
 
-- Artifact: `trained_system_twibot20.joblib`
-- Entry point: `evaluate_twibot20_native.py`
-- Purpose: run the TwiBot-trained cascade on TwiBot-20 using the native feature pipeline
+- `eval_botsim_native.py`
+  - writes `paper_outputs/metrics_botsim.json`
+  - writes `paper_outputs/confusion_matrix_botsim.png`
 
-## Evaluation Entry Points
+- `eval_reddit_twibot_transfer.py`
+  - writes `paper_outputs/metrics_reddit_transfer.json`
+  - writes `paper_outputs/confusion_matrix_reddit_transfer.png`
 
-- `evaluate_twibot20.py`
-  Maintained Reddit-transfer evaluation path. Writes the static Reddit-transfer
-  artifacts only.
+- `eval_twibot_native.py`
+  - writes `paper_outputs/metrics_twibot_native.json`
+  - writes `paper_outputs/confusion_matrix_twibot_native.png`
 
-- `evaluate_twibot20_native.py`
-  TwiBot-native evaluation path. Writes native results and metrics for the
-  supervised baseline artifact.
-
-- `ablation_tables.py`
-  Builds the paper-facing Reddit-vs-native comparison artifact and writes Table
-  5 outputs.
+- `generate_table5.py`
+  - reads the maintained `paper_outputs/*.json` metrics files
+  - writes `tables/table5_cross_dataset.tex`
 
 ## Canonical Commands
 
-### Reddit transfer baseline
+### Train BotSim
 
 ```bash
-python evaluate_twibot20.py test.json trained_system_v12.joblib \
-  .planning/phases/16-comparative-paper-outputs-and-reddit-cleanup/artifacts
+python train_botsim.py
 ```
 
-### TwiBot-native baseline
+### Train TwiBot
 
 ```bash
-python evaluate_twibot20_native.py test.json trained_system_twibot20.joblib \
-  .planning/phases/15-twibot-cascade-training-and-evaluation/artifacts
+python train_twibot.py
 ```
 
-### Paper-facing comparison
+### Evaluate BotSim native
 
 ```bash
-python ablation_tables.py
+python eval_botsim_native.py
 ```
 
-## Maintained Output Files
+### Evaluate Reddit -> TwiBot transfer
 
-### Reddit transfer artifacts
+```bash
+python eval_reddit_twibot_transfer.py
+```
 
-Written to `.planning/phases/16-comparative-paper-outputs-and-reddit-cleanup/artifacts/`:
+### Evaluate TwiBot native
 
-- `results_twibot20_reddit_transfer.json`
-- `metrics_twibot20_reddit_transfer.json`
+```bash
+python eval_twibot_native.py
+```
 
-### TwiBot-native artifacts
+### Generate Table 5
 
-Written to `.planning/phases/15-twibot-cascade-training-and-evaluation/artifacts/`:
-
-- `results_twibot20_native.json`
-- `metrics_twibot20_native.json`
-- `calibration_twibot20_native.json`
-
-### Comparison / paper artifacts
-
-Written by `ablation_tables.py`:
-
-- `.planning/phases/16-comparative-paper-outputs-and-reddit-cleanup/artifacts/metrics_twibot20_reddit_vs_native.json`
-- `tables/table5_cross_dataset.tex`
-- `tables/table5_transfer_interpretation.txt`
-
-## Historical Outputs
-
-The following remain archived but are no longer the maintained default:
-
-- `metrics_twibot20_comparison.json`
-- `transfer_evidence_summary.json`
-
-Those files describe the older Phase 12 static-vs-recalibrated Reddit transfer
-comparison.
-
-## Environment Overrides
-
-`ablation_tables.py` honors:
-
-- `TWIBOT_COMPARISON_PATH`
-- `TWIBOT_REDDIT_METRICS_PATH`
-- `TWIBOT_NATIVE_METRICS_PATH`
-- `TABLE5_OUTPUT_PATH`
-- `TABLE5_INTERPRETATION_PATH`
+```bash
+python generate_table5.py
+```
 
 ## Current Contract Notes
 
-- Online novelty recalibration is no longer part of the maintained Reddit
-  transfer path.
-- Reddit-trained and TwiBot-trained artifacts must stay separate.
-- The maintained paper-facing comparison is Reddit transfer vs TwiBot-native,
-  not static vs recalibrated transfer.
+- The maintained orchestration layer is `CascadePipeline`.
+- Shared extractors live under `features/`.
+- Stage 2b retains only the AMR embedding delta-logit path; the LSTM path is removed.
+- Bayesian threshold calibration is maintained as a single-trial contract.
+- The repo keeps one maintained evaluation surface only; removed duplicate scripts should not be revived in docs or commands.
 
-See `README.md` for the end-to-end reproduction guide and caveats.
+## Current Workspace Caveat
+
+Phase 20 code is complete, but this specific workspace still does not have a fresh local `trained_system_twibot.joblib`. That means:
+
+- `eval_twibot_native.py` is the correct maintained entry point
+- `generate_table5.py` is the correct maintained Table 5 driver
+- full local TwiBot-native runtime smoke remains blocked until the deferred TwiBot retraining rerun succeeds
+
+## Historical References
+
+The following names are historical only and not part of the maintained v1.5 contract:
+
+- `trained_system_v12.joblib`
+- `trained_system_twibot20.joblib`
+- `evaluate_twibot20.py`
+- `evaluate_twibot20_native.py`
+
+See `README.md` for the full system description, feature-stage mapping, and reproduction guide.

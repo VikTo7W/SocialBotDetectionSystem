@@ -6,7 +6,7 @@ They will fail with ImportError until Wave 2 implements api.py.
 
 Fixtures:
     client: FastAPI TestClient with a minimal trained system loaded from a temp joblib file.
-            Patches MODEL_PATH env var so api.py loads the test system, not a real trained_system.joblib.
+            Patches MODEL_PATH env var so api.py loads the test system, not a real maintained artifact.
 """
 
 import importlib

@@ -37,8 +37,8 @@ from botdetector_pipeline import (
     sigmoid,
     entropy_from_p,
 )
-from features_stage1 import extract_stage1_matrix
-from features_stage2 import extract_stage2_features
+from features.stage1 import Stage1Extractor
+from features.stage2 import Stage2Extractor
 
 
 class FakeEmbedder:
@@ -151,8 +151,8 @@ def minimal_system():
     y = S2["label"].to_numpy(dtype=np.int64)
 
     # ---- Extract features using real functions (not patched versions) ----
-    X1 = extract_stage1_matrix(S2)
-    X2 = extract_stage2_features(S2, fake_embedder)
+    X1 = Stage1Extractor("botsim").extract(S2)
+    X2 = Stage2Extractor("botsim").extract(S2, fake_embedder)
 
     # ---- Fit Stage1MetadataModel ----
     stage1 = Stage1MetadataModel(use_isotonic=False, random_state=42)
