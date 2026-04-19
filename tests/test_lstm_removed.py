@@ -1,6 +1,6 @@
 import dataclasses
 
-import botdetector_pipeline as bp
+import cascade_pipeline as bp
 
 
 def test_stage2_lstm_refiner_symbol_is_absent():

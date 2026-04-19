@@ -20,7 +20,7 @@ import pandas as pd
 import pytest
 
 from cascade_pipeline import CascadePipeline
-from botdetector_pipeline import (
+from cascade_pipeline import (
     FeatureConfig,
     StageThresholds,
     TrainedSystem,
@@ -115,16 +115,16 @@ class TestCascadePipelineIsMaintenedSurface:
 class TestCompatibilityWrappersForwardToCascadePipeline:
     """train_system() and predict_system() must be explicit forwarding wrappers."""
 
-    def test_train_system_is_importable_from_botdetector_pipeline(self):
-        import botdetector_pipeline as bp
-        assert hasattr(bp, "train_system"), (
-            "botdetector_pipeline must still export train_system for compatibility"
+    def test_train_system_is_importable_from_cascade_pipeline(self):
+        import cascade_pipeline as cp
+        assert hasattr(cp, "train_system"), (
+            "cascade_pipeline must export train_system"
         )
 
-    def test_predict_system_is_importable_from_botdetector_pipeline(self):
-        import botdetector_pipeline as bp
-        assert hasattr(bp, "predict_system"), (
-            "botdetector_pipeline must still export predict_system for compatibility"
+    def test_predict_system_is_importable_from_cascade_pipeline(self):
+        import cascade_pipeline as cp
+        assert hasattr(cp, "predict_system"), (
+            "cascade_pipeline must export predict_system"
         )
 
     def test_train_system_calls_cascade_pipeline_fit(self, synthetic_training_split, monkeypatch):

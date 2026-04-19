@@ -27,8 +27,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from features.stage2 import Stage2Extractor
-from botdetector_pipeline import (
+from cascade_pipeline import (
+    Stage2Extractor,
     extract_amr_embeddings_for_accounts,
     FeatureConfig,
 )

@@ -17,8 +17,8 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
 os.environ.setdefault("MKL_NUM_THREADS", "1")
 
-import botdetector_pipeline as bp
-from botdetector_pipeline import (
+import cascade_pipeline as bp
+from cascade_pipeline import (
     TrainedSystem,
     StageThresholds,
     FeatureConfig,
@@ -36,9 +36,9 @@ from botdetector_pipeline import (
     logit,
     sigmoid,
     entropy_from_p,
+    Stage1Extractor,
+    Stage2Extractor,
 )
-from features.stage1 import Stage1Extractor
-from features.stage2 import Stage2Extractor
 
 
 class FakeEmbedder:
@@ -166,7 +166,7 @@ def minimal_system():
 
     # ---- Fit AMRDeltaRefiner ----
     # Use stage2a logits as z_base; AMR embeddings from most-recent message text
-    from botdetector_pipeline import extract_amr_embeddings_for_accounts
+    from cascade_pipeline import extract_amr_embeddings_for_accounts
     H_amr = extract_amr_embeddings_for_accounts(S2, FeatureConfig(stage1_numeric_cols=[]), fake_embedder)
     z2a = out2a["z2a"]
 

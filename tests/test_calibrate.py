@@ -15,8 +15,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-import botdetector_pipeline as bp
-from botdetector_pipeline import StageThresholds
+import cascade_pipeline as bp
+from cascade_pipeline import StageThresholds
 
 
 def _import_calibrate():

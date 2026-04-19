@@ -240,7 +240,7 @@ class TestIntegrationWithMinimalSystem:
         Use the minimal_system fixture to run predict_system and then evaluate_s3.
         Verifies full integration without real data or sentence-transformers.
         """
-        from botdetector_pipeline import predict_system
+        from cascade_pipeline import predict_system
 
         system, S2, edges_S2, nodes_total = minimal_system
         results = predict_system(system, S2, edges_S2, nodes_total)
@@ -264,7 +264,7 @@ class TestIntegrationWithMinimalSystem:
         assert abs(total - 100.0) < 0.01, f"Exit percentages sum to {total:.4f}"
 
     def test_shared_pipeline_predict_matches_wrapper(self, minimal_system):
-        from botdetector_pipeline import predict_system
+        from cascade_pipeline import predict_system
 
         system, S2, edges_S2, nodes_total = minimal_system
         pipeline = CascadePipeline("botsim", cfg=system.cfg, embedder=system.embedder)

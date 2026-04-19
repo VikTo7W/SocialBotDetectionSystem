@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from features.stage2 import STAGE2_TWITTER_COLUMNS, Stage2Extractor
+from cascade_pipeline import STAGE2_TWITTER_COLUMNS, Stage2Extractor
 
 
 class HashingFakeEmbedder:

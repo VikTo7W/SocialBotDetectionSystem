@@ -31,10 +31,9 @@ import pandas as pd
 import torch
 from sklearn.model_selection import train_test_split
 
-from botsim24_io import load_users_csv, load_user_post_comment_json, build_account_table
-from botdetector_pipeline import predict_system
+from data_io import load_users_csv, load_user_post_comment_json, build_account_table
+from cascade_pipeline import predict_system, Stage1Extractor
 from evaluate import evaluate_s3
-from features.stage1 import Stage1Extractor
 from train_botsim import filter_edges_for_split
 
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -409,7 +408,7 @@ def masked_predict(sys_obj, S3, edges_S3, nodes_total, mask_cols):
     Returns:
         DataFrame returned by predict_system() with masked features.
     """
-    import botdetector_pipeline as bp
+    import cascade_pipeline as bp
 
     def _masked_extract(df):
         X = Stage1Extractor("botsim").extract(df)

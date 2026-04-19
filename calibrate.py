@@ -14,7 +14,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-from botdetector_pipeline import StageThresholds, TrainedSystem, predict_system
+from cascade_pipeline import StageThresholds, TrainedSystem, predict_system
 
 METRIC_FNS = {
     "f1": lambda y, p: f1_score(y, (p >= 0.5).astype(int), zero_division=0),

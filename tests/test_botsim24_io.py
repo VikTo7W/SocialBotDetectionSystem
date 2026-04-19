@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import pytest
 
-from botsim24_io import build_account_table
+from data_io import build_account_table
 
 
 def test_no_character_setting_in_table():

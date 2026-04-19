@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from features.stage1 import STAGE1_TWITTER_COLUMNS, Stage1Extractor
+from cascade_pipeline import STAGE1_TWITTER_COLUMNS, Stage1Extractor
 
 
 def _account(

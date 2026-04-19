@@ -12,8 +12,8 @@ from sklearn.model_selection import train_test_split
 from calibrate import calibrate_thresholds, write_calibration_report_artifact
 from cascade_pipeline import CascadePipeline, FeatureConfig, StageThresholds
 from evaluate import evaluate_s3
-from features.stage1 import STAGE1_TWITTER_COLUMNS
-from twibot20_io import _detect_encoding, build_edges, load_accounts
+from cascade_pipeline import STAGE1_TWITTER_COLUMNS
+from data_io import _detect_encoding, build_edges, load_accounts
 
 SEED = 42
 DEFAULT_TWIBOT_MODEL_PATH = "trained_system_twibot.joblib"

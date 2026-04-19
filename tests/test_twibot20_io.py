@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from twibot20_io import load_accounts, build_edges, validate, parse_tweet_types
+from data_io import load_accounts, build_edges, validate, parse_tweet_types
 
 
 def _write_test_json(records: list, tmp_path) -> str:

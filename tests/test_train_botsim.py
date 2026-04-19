@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from botdetector_pipeline import StageThresholds
+from cascade_pipeline import StageThresholds
 from train_botsim import (
     DEFAULT_BOTSIM_MODEL_PATH,
     ensure_safe_model_output_path,

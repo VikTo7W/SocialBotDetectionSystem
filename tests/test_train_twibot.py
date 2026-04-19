@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from botdetector_pipeline import StageThresholds
+from cascade_pipeline import StageThresholds
 from cascade_pipeline import CascadePipeline
 from train_twibot import (
     DEFAULT_TWIBOT_MODEL_PATH,
