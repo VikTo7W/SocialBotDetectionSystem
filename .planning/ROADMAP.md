@@ -7,7 +7,8 @@
 - [x] **v1.2 TwiBot-20 Cross-Domain Transfer** - Phases 8-10 (shipped 2026-04-18)
 - [x] **v1.3 Twibot System Version** - Phases 11-13 (shipped 2026-04-18)
 - [x] **v1.4 Twitter-Native Supervised Baseline** - Phases 14-16 (shipped 2026-04-18)
-- [ ] **v1.5 Unified Modular Codebase** - Phases 17-21 (active)
+- [x] **v1.5 Unified Modular Codebase** - Phases 17-21 (shipped 2026-04-19)
+- [ ] **v1.6 Structural Consolidation and Code Surface Cleanup** - Phases 22-25 (active)
 
 ## Phases
 
@@ -51,156 +52,89 @@
 <details>
 <summary>[x] v1.4 Twitter-Native Supervised Baseline (Phases 14-16) - SHIPPED 2026-04-18</summary>
 
-- [x] **Phase 14: Twitter-Native Feature Pipeline** - Build TwiBot-native Stage 1, Stage 2, and Stage 3 feature extraction without Reddit mappings, imputing, or zero-fill stand-ins
-- [x] **Phase 15: TwiBot Cascade Training and Evaluation** - Train a TwiBot-native cascade, persist separate model artifact(s), and evaluate on the TwiBot test split
-- [x] **Phase 16: Comparative Paper Outputs and Reddit Cleanup** - Compare Reddit-trained vs TwiBot-trained results, remove Reddit novelty recalibration, and update release-facing docs
+- [x] Phase 14: Twitter-Native Feature Pipeline (3/3 plans) - completed 2026-04-18
+- [x] Phase 15: TwiBot Cascade Training and Evaluation (2/2 plans) - completed 2026-04-18
+- [x] Phase 16: Comparative Paper Outputs and Reddit Cleanup (3/3 plans) - completed 2026-04-18
+
+</details>
+
+<details>
+<summary>[x] v1.5 Unified Modular Codebase (Phases 17-21) - SHIPPED 2026-04-19</summary>
+
+- [x] Phase 17: Shared Feature Extraction Module (6/6 plans) - completed 2026-04-19
+- [x] Phase 18: Unified Cascade Pipeline and Calibration (4/4 plans) - completed 2026-04-19
+- [x] Phase 19: Training Entry Points and Fresh Model Retraining (4/4 plans) - completed 2026-04-19
+- [x] Phase 20: Evaluation Entry Points and Paper Outputs (5/5 plans) - completed 2026-04-19
+- [x] Phase 21: Documentation (3/3 plans) - completed 2026-04-19
 
 </details>
 
 <details open>
-<summary>[ ] v1.5 Unified Modular Codebase (Phases 17-21) - ACTIVE</summary>
+<summary>[ ] v1.6 Structural Consolidation and Code Surface Cleanup (Phases 22-25) - ACTIVE</summary>
 
-- [x] **Phase 17: Shared Feature Extraction Module** - Unify all feature extractor classes into a single dataset-parameterized module, removing duplication across Reddit and TwiBot codebases
-- [x] **Phase 18: Unified Cascade Pipeline and Calibration** - Implement the cascade training pipeline once (OOF stacking, meta-learner fitting, single-trial Bayesian calibration) with object-oriented structure
-- [ ] **Phase 19: Training Entry Points and Fresh Model Retraining** - Build clean train_botsim.py and train_twibot.py entry points and retrain both cascade artifacts from the unified code
-- [ ] **Phase 20: Evaluation Entry Points and Paper Outputs** - Build three clean evaluation entry points and regenerate all paper-facing outputs (confusion matrices, routing stats, metric tables, Table 5)
-- [ ] **Phase 21: Documentation** - Write a comprehensive README covering system architecture, technique rationale, feature-stage mapping, and full reproduction guide
+- [ ] Phase 22: Pipeline Surface Consolidation (0/3 plans) - ready to execute
+- [ ] Phase 23: Unified Feature Surface (0/0 plans) - pending
+- [ ] Phase 24: Unified Dataset I/O and Caller Migration (0/0 plans) - pending
+- [ ] Phase 25: Final File Cleanup and Comment Pass (0/0 plans) - pending
 
 </details>
 
 ## Phase Details
 
-### Phase 14: Twitter-Native Feature Pipeline
-**Goal**: TwiBot-20 accounts can be transformed into native Stage 1, Stage 2, and Stage 3 feature inputs without relying on Reddit analog mappings
-**Depends on**: Phase 13
-**Requirements**: TWN-01, TWN-02, TWN-03
+### Phase 22: Pipeline Surface Consolidation
+**Goal**: Collapse overlapping maintained responsibilities between `botdetector_pipeline.py` and `cascade_pipeline.py` so one pipeline/orchestration surface is clearly the source of truth
+**Depends on**: Phase 21
+**Requirements**: CONS-01, PRES-03
 **Success Criteria** (what must be TRUE):
-  1. Stage 1 uses only TwiBot-native account/activity signals and does not reuse Reddit slot mappings
-  2. Stage 2 uses only TwiBot-native tweet text and timeline signals, with unavailable fields omitted rather than imputed as fake in-distribution values
-  3. Stage 3 uses only TwiBot-native graph relations and feature definitions that correspond to available TwiBot structure
-  4. Feature extraction paths are testable independently of full model training
+  1. One maintained pipeline/orchestration layer clearly owns fit/predict routing and stage coordination
+  2. Overlapping helper functions, wrappers, or duplicated orchestration logic are removed or collapsed
+  3. Split discipline, routing logic, and AMR-only Stage 2b behavior remain unchanged after the consolidation
+  4. Maintained callers still work without needing to know about multiple pipeline surfaces
 **Plans**: 3 plans
 Plans:
-- [x] 14-01-PLAN.md - Build standalone TwiBot-native Stage 1 extractor and focused unit tests (TWN-01)
-- [x] 14-02-PLAN.md - Build standalone TwiBot-native Stage 2 extractor and focused unit tests (TWN-02)
-- [x] 14-03-PLAN.md - Define the TwiBot-native Stage 3 graph feature contract via wrapper/helper and focused graph tests (TWN-03)
-**Completed**: 2026-04-18
+- [ ] 22-01-PLAN.md - Create the red-test safety net for the maintained pipeline surface and compatibility-forwarding contract (CONS-01, PRES-03)
+- [ ] 22-02-PLAN.md - Consolidate orchestration ownership into `cascade_pipeline.py` and demote `botdetector_pipeline.py` to compatibility or stage-support duties (CONS-01, PRES-03)
+- [ ] 22-03-PLAN.md - Align maintained callers and docs to the clarified pipeline owner and run parity-focused verification (CONS-01, PRES-03)
+**Completed**: not completed
 **UI hint**: no
 
-### Phase 15: TwiBot Cascade Training and Evaluation
-**Goal**: A separate TwiBot-trained cascade can be trained, stored, and evaluated on TwiBot-20 with leakage-safe splits and reproducible metrics
-**Depends on**: Phase 14
-**Requirements**: TRN-01, TRN-02, TRN-03
+### Phase 23: Unified Feature Surface
+**Goal**: Consolidate maintained feature extraction into one simplified file or module surface with one unifying class contract for all stages and both datasets
+**Depends on**: Phase 22
+**Requirements**: CONS-02
 **Success Criteria** (what must be TRUE):
-  1. A complete training flow produces a TwiBot-trained artifact without overwriting the Reddit-trained system
-  2. Evaluation on TwiBot test produces overall, per-stage, and routing metrics
-  3. The training and evaluation flow is reproducible with explicit artifact paths and seed usage
-**Plans**: 2 plans
-Plans:
-- [x] 15-01-PLAN.md - Build the TwiBot-native training/calibration entry point with separate artifact routing and focused tests (TRN-01, TRN-03)
-- [x] 15-02-PLAN.md - Build the TwiBot-native evaluation entry point with stable native metrics artifacts and focused tests (TRN-02, TRN-03)
-**Completed**: 2026-04-18
+  1. Maintained feature extraction lives behind one simplified file or module surface rather than multiple stage files and leftover shims
+  2. A unifying class or class family cleanly exposes Stage 1, Stage 2, and Stage 3 extraction for both datasets
+  3. Maintained callers and tests import the new surface directly instead of through redundant compatibility layers
+  4. Dataset-specific feature constraints remain intact even after the surface is consolidated
+**Plans**: 0 plans
+**Completed**: not completed
 **UI hint**: no
 
-### Phase 16: Comparative Paper Outputs and Reddit Cleanup
-**Goal**: v1.4 records the platform-matched TwiBot baseline, compares it against the Reddit transfer result, and removes the unsupported recalibration path from the Reddit system
-**Depends on**: Phase 15
-**Requirements**: CMP-01, CMP-02, CMP-03
+### Phase 24: Unified Dataset I/O and Caller Migration
+**Goal**: Merge BotSim-24 and TwiBot-20 dataset I/O into one maintained surface and migrate maintained callers onto the consolidated internals without changing external artifact or output contracts
+**Depends on**: Phase 23
+**Requirements**: CONS-03, PRES-01, PRES-02
 **Success Criteria** (what must be TRUE):
-  1. A paper-facing comparison output contrasts Reddit-trained-on-TwiBot with TwiBot-trained-on-TwiBot
-  2. The Reddit online novelty-recalibration path is removed or retired from the maintained system path
-  3. Docs clearly explain the separate artifacts, reproduction path, and caveats
-**Plans**: 3 plans
-Plans:
-- [x] 16-01-PLAN.md - Refresh the paper-facing comparison artifact and Table 5 to compare Reddit-trained transfer against the TwiBot-native baseline (CMP-01)
-- [x] 16-02-PLAN.md - Retire online novelty recalibration from the maintained Reddit transfer evaluation path and lock down the post-cleanup baseline contract (CMP-02)
-- [x] 16-03-PLAN.md - Update README/VERSION release docs for the separate artifacts and revised v1.4 comparison story (CMP-03)
-**Completed**: 2026-04-18
+  1. One maintained dataset I/O surface covers BotSim-24 and TwiBot-20 loading, split access, and caller-facing preparation
+  2. Maintained training and evaluation entry points use the unified dataset I/O and consolidated internals
+  3. Public artifact names, metric schema, and paper-output filenames stay unchanged
+  4. API and batch callers remain aligned with the simplified code surface
+**Plans**: 0 plans
+**Completed**: not completed
 **UI hint**: no
 
-### Phase 17: Shared Feature Extraction Module
-**Goal**: All Stage 1, 2a, 2b, and 3 feature extractors live in a single features/ module, parameterized by dataset, with no duplicated extractor code across the Reddit and TwiBot codebases
-**Depends on**: Phase 16
-**Requirements**: CORE-01, CORE-02, CORE-05
+### Phase 25: Final File Cleanup and Comment Pass
+**Goal**: Remove obsolete redundant files after the consolidation settles and add short lowercase descriptive comments to maintained classes and methods where they genuinely help readability
+**Depends on**: Phase 24
+**Requirements**: CONS-04, QUAL-03
 **Success Criteria** (what must be TRUE):
-  1. A single dataset parameter (`botsim` or `twibot`) passed at construction selects the correct extractors, data loaders, and split logic without any dataset-specific branches in shared pipeline code
-  2. All Stage 1, 2a, 2b, and 3 extractor classes live under features/ and accept the dataset parameter
-  3. Stage 2b exposes only the AMR embedding delta-logit path; no LSTM class, method, or code path remains in the module
-  4. The features/ module can be imported and the extractors instantiated for both datasets without importing unrelated pipeline code
-**Plans**: 6 plans
-Plans:
-- [x] 17-01-PLAN.md - Create Wave 0 red test scaffolding, remove LSTM fixtures from shared tests, and retarget extractor tests to the future shared module surface (CORE-01, CORE-02, CORE-05)
-- [x] 17-02-PLAN.md - Build the shared Stage 1 extractor and unified `data_io.load_dataset()` dispatch in the new package surface (CORE-01, CORE-02)
-- [x] 17-03-PLAN.md - Build the shared Stage 2 extractor and AMR embedding extraction surface for botsim and twibot contracts (CORE-02)
-- [x] 17-04-PLAN.md - Build the shared Stage 3 extractor, relocate graph feature extraction, and align Stage 3 tests to the new module (CORE-02)
-- [x] 17-05-PLAN.md - Remove the LSTM Stage 2b path and simplify the maintained pipeline contract to AMR-only (CORE-05)
-- [x] 17-06-PLAN.md - Add compatibility shims for legacy feature imports and run whole-phase verification for the shared extraction refactor (CORE-01, CORE-02, CORE-05)
-**Completed**: 2026-04-19
-**UI hint**: no
-
-### Phase 18: Unified Cascade Pipeline and Calibration
-**Goal**: The cascade training pipeline (OOF stacking, meta-learner fitting, Bayesian threshold calibration) exists as a single reusable implementation consumed by both training entry points, structured with classes and methods, with calibration reduced to one trial
-**Depends on**: Phase 17
-**Requirements**: CORE-03, CORE-04, QUAL-01, QUAL-02
-**Success Criteria** (what must be TRUE):
-  1. OOF stacking, meta-learner fitting, and threshold calibration are implemented once and invoked identically by both training entry points — no duplicated pipeline logic
-  2. Bayesian threshold calibration runs exactly one trial for both systems; any previous multi-restart loop is removed
-  3. Pipeline code is organized into classes with methods (data loading, feature extraction per stage, cascade pipeline, evaluation); no loose top-level procedural scripts
-  4. Code comments are lowercase, explain the why rather than the what, and are used sparingly — no AI-style block commentary
-**Plans**: 4 plans
-Plans:
-- [x] 18-01-PLAN.md - Create the red-test safety net for shared pipeline orchestration and the maintained single-trial calibration contract (CORE-03, CORE-04, QUAL-01)
-- [x] 18-02-PLAN.md - Build the shared dataset-aware cascade pipeline layer and demote `botdetector_pipeline.py` to stage-model/compatibility responsibilities (CORE-03, QUAL-01, QUAL-02)
-- [x] 18-03-PLAN.md - Simplify maintained calibration to a stable single-trial contract and update calibration evidence/reporting tests (CORE-04, QUAL-01)
-- [x] 18-04-PLAN.md - Migrate current BotSim/TwiBot training callers onto the shared core and run phase-level verification (CORE-03, CORE-04, QUAL-02)
-**Completed**: 2026-04-19
-**UI hint**: no
-
-### Phase 19: Training Entry Points and Fresh Model Retraining
-**Goal**: Two clean training entry points (train_botsim.py and train_twibot.py) invoke the shared pipeline and produce fresh, separately named cascade artifacts that replace the previous separately coded training scripts
-**Depends on**: Phase 18
-**Requirements**: TRAIN-01, TRAIN-02
-**Success Criteria** (what must be TRUE):
-  1. Running train_botsim.py completes a full BotSim-24 cascade training and writes trained_system_botsim.joblib without touching any TwiBot artifact
-  2. Running train_twibot.py completes a full TwiBot-20 cascade training from train.json and writes trained_system_twibot.joblib without touching any BotSim artifact
-  3. Both artifacts are produced by the unified pipeline code (Phase 18), not by any legacy separate training scripts
-  4. Both training runs complete reproducibly with SEED=42 and produce artifacts that load without error
-**Plans**: 4 plans
-Plans:
-- [x] 19-01-PLAN.md - Create the red-test safety net for the maintained training entry-point names, artifact defaults, and isolation guarantees (TRAIN-01, TRAIN-02)
-- [x] 19-02-PLAN.md - Build `train_botsim.py` as the maintained BotSim training path and demote `main.py` to compatibility-only responsibilities (TRAIN-01)
-- [x] 19-03-PLAN.md - Build `train_twibot.py` as the maintained TwiBot training path and align native evaluation with the renamed artifact contract (TRAIN-02)
-- [x] 19-04-PLAN.md - Run the new maintained training entry points, generate fresh artifacts, and verify the unified training surface end-to-end (TRAIN-01, TRAIN-02)
-**UI hint**: no
-
-### Phase 20: Evaluation Entry Points and Paper Outputs
-**Goal**: Three evaluation entry points cover all maintained evaluation paths and each produces the full set of paper-ready outputs (confusion matrices, routing statistics, per-stage metric tables, and the Reddit-transfer-vs-native comparison table)
-**Depends on**: Phase 19
-**Requirements**: EVAL-01, EVAL-02, EVAL-03, PAPER-01, PAPER-02, PAPER-03
-**Success Criteria** (what must be TRUE):
-  1. eval_botsim_native.py evaluates the Reddit-trained model on the BotSim-24 test split and produces per-stage breakdown and routing statistics
-  2. eval_reddit_twibot_transfer.py evaluates the Reddit-trained model on TwiBot-20 test data in zero-shot mode and produces the same output format
-  3. eval_twibot_native.py evaluates the TwiBot-trained model on TwiBot-20 test data and produces the same output format
-  4. Every evaluation entry point writes a confusion matrix image file and a routing statistics / per-stage metric table in the existing paper format
-  5. The Reddit-transfer-vs-native comparison artifact (Table 5) is generated from the outputs of EVAL-02 and EVAL-03 without manual steps
-**Plans**: 5 plans
-Plans:
-- [ ] 20-01-PLAN.md - Wave 0 red-test scaffolding for the three evaluation entry points, the Table 5 driver, and a one-line import fix that unblocks `test_ablation_tables.py` collection (EVAL-01, EVAL-02, EVAL-03, PAPER-01, PAPER-02, PAPER-03)
-- [ ] 20-02-PLAN.md - Build `eval_botsim_native.py` as the maintained EVAL-01 entry point, reconstructing the SEED=42 S3 split and writing `paper_outputs/metrics_botsim.json` and `paper_outputs/confusion_matrix_botsim.png` (EVAL-01, PAPER-01, PAPER-02)
-- [ ] 20-03-PLAN.md - Build `eval_reddit_twibot_transfer.py` as the maintained EVAL-02 entry point using a DataFrame-rewrite transfer adapter (no monkey-patching) and writing `paper_outputs/metrics_reddit_transfer.json` and `paper_outputs/confusion_matrix_reddit_transfer.png` (EVAL-02, PAPER-01, PAPER-02)
-- [ ] 20-04-PLAN.md - Build `eval_twibot_native.py` as the maintained EVAL-03 entry point routed through `CascadePipeline('twibot')` and writing `paper_outputs/metrics_twibot_native.json` and `paper_outputs/confusion_matrix_twibot_native.png` (EVAL-03, PAPER-01, PAPER-02)
-- [ ] 20-05-PLAN.md - Build `generate_table5.py` as the standalone PAPER-03 Table 5 driver that reads the three `paper_outputs/*.json` files and writes `tables/table5_cross_dataset.tex`, plus phase-level verification (PAPER-03)
-**UI hint**: no
-
-### Phase 21: Documentation
-**Goal**: README.md is a self-contained reference that a reader unfamiliar with the codebase can use to understand the system architecture, the rationale for each technique, the feature-stage mapping for both datasets, and the exact commands needed to reproduce all results
-**Depends on**: Phase 20
-**Requirements**: DOC-01, DOC-02, DOC-03
-**Success Criteria** (what must be TRUE):
-  1. README.md explains the cascade architecture and the rationale for each technique (LightGBM, Mahalanobis novelty, AMR delta-logit, logistic-regression stackers, Bayesian calibration)
-  2. README.md documents, per dataset (BotSim-24 and TwiBot-20), which features are extracted and how they map to Stage 1, 2a, 2b, and Stage 3
-  3. README.md contains a reproduction guide listing data requirements, training commands, evaluation commands, and expected outputs for all three evaluation paths
-**Plans**: TBD
+  1. Redundant maintained-code files and stale compatibility layers are removed once no maintained caller depends on them
+  2. The active repo surface is visibly smaller and easier to navigate than the v1.5 layout
+  3. Maintained classes and methods have concise lowercase comments only where they help the next reader understand intent
+  4. Documentation and tests point only to the simplified maintained surface
+**Plans**: 0 plans
+**Completed**: not completed
 **UI hint**: no
 
 ## Progress
@@ -225,6 +159,10 @@ Plans:
 | 16. Comparative Paper Outputs and Reddit Cleanup | v1.4 | 3/3 | Complete | 2026-04-18 |
 | 17. Shared Feature Extraction Module | v1.5 | 6/6 | Complete | 2026-04-19 |
 | 18. Unified Cascade Pipeline and Calibration | v1.5 | 4/4 | Complete | 2026-04-19 |
-| 19. Training Entry Points and Fresh Model Retraining | v1.5 | 0/4 | Planned | - |
-| 20. Evaluation Entry Points and Paper Outputs | v1.5 | 0/5 | Planned | - |
-| 21. Documentation | v1.5 | 0/? | Not started | - |
+| 19. Training Entry Points and Fresh Model Retraining | v1.5 | 4/4 | Complete | 2026-04-19 |
+| 20. Evaluation Entry Points and Paper Outputs | v1.5 | 5/5 | Complete | 2026-04-19 |
+| 21. Documentation | v1.5 | 3/3 | Complete | 2026-04-19 |
+| 22. Pipeline Surface Consolidation | v1.6 | 0/3 | Planned | |
+| 23. Unified Feature Surface | v1.6 | 0/0 | Not started | |
+| 24. Unified Dataset I/O and Caller Migration | v1.6 | 0/0 | Not started | |
+| 25. Final File Cleanup and Comment Pass | v1.6 | 0/0 | Not started | |
