@@ -10,9 +10,8 @@ import torch
 from sklearn.model_selection import train_test_split
 
 from botsim24_io import build_account_table, load_user_post_comment_json, load_users_csv
-from botdetector_pipeline import StageThresholds
 from calibrate import calibrate_thresholds
-from cascade_pipeline import CascadePipeline
+from cascade_pipeline import CascadePipeline, StageThresholds
 from evaluate import evaluate_s3
 
 SEED = 42

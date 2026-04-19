@@ -9,9 +9,8 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-from botdetector_pipeline import FeatureConfig, StageThresholds
 from calibrate import calibrate_thresholds, write_calibration_report_artifact
-from cascade_pipeline import CascadePipeline
+from cascade_pipeline import CascadePipeline, FeatureConfig, StageThresholds
 from evaluate import evaluate_s3
 from features.stage1 import STAGE1_TWITTER_COLUMNS
 from twibot20_io import _detect_encoding, build_edges, load_accounts

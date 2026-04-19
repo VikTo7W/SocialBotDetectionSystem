@@ -9,7 +9,7 @@ import joblib
 from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel, Field
 
-from botdetector_pipeline import predict_system
+from cascade_pipeline import CascadePipeline, infer_dataset
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -91,10 +91,13 @@ def _to_dataframe(req: AccountRequest) -> pd.DataFrame:
 def predict(req: AccountRequest, request: Request):
     df = _to_dataframe(req)
     try:
-        result = predict_system(
-            sys=request.app.state.system,
-            df=df,
-            edges_df=EMPTY_EDGES,
+        system = request.app.state.system
+        dataset = infer_dataset(df, system.cfg)
+        pipeline = CascadePipeline(dataset=dataset, cfg=system.cfg, embedder=system.embedder)
+        result = pipeline.predict(
+            system,
+            df,
+            EMPTY_EDGES,
             nodes_total=1,
         )
     except (ValueError, RuntimeError) as exc:

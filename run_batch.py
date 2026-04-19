@@ -28,7 +28,7 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from botdetector_pipeline import predict_system, TrainedSystem
+from cascade_pipeline import CascadePipeline, TrainedSystem, infer_dataset
 
 # ---------------------------------------------------------------------------
 # DATASET STRUCTURE
@@ -292,10 +292,12 @@ def main() -> None:
     #       "weight":    [1.0, ...],
     #   })
     print("Running cascade inference ...")
-    results = predict_system(
-        sys=system,
-        df=df,
-        edges_df=EMPTY_EDGES,
+    dataset = infer_dataset(df, system.cfg)
+    pipeline = CascadePipeline(dataset=dataset, cfg=system.cfg, embedder=system.embedder)
+    results = pipeline.predict(
+        system,
+        df,
+        EMPTY_EDGES,
         nodes_total=len(df),
     )
 
