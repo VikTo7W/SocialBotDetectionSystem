@@ -1,10 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from features_stage2_twitter import (
-    STAGE2_TWITTER_COLUMNS,
-    extract_stage2_features_twitter,
-)
+from features.stage2 import STAGE2_TWITTER_COLUMNS, Stage2Extractor
 
 
 class HashingFakeEmbedder:
@@ -26,7 +23,7 @@ def _df(messages):
 
 
 def test_stage2_twitter_empty_messages_are_shape_stable():
-    X = extract_stage2_features_twitter(_df([]), HashingFakeEmbedder())
+    X = Stage2Extractor("twibot").extract(_df([]), HashingFakeEmbedder())
 
     assert X.shape == (1, len(STAGE2_TWITTER_COLUMNS))
     assert X.dtype == np.float32
@@ -39,7 +36,7 @@ def test_stage2_twitter_empty_messages_are_shape_stable():
 
 
 def test_stage2_twitter_single_message_semantics():
-    X = extract_stage2_features_twitter(
+    X = Stage2Extractor("twibot").extract(
         _df([{"text": "Hello 123!", "ts": None, "kind": "tweet"}]),
         HashingFakeEmbedder(),
     )
@@ -61,7 +58,7 @@ def test_stage2_twitter_duplicate_messages_raise_near_dup_features():
         {"text": "different", "ts": None, "kind": "tweet"},
     ]
 
-    X = extract_stage2_features_twitter(_df(messages), embedder)
+    X = Stage2Extractor("twibot").extract(_df(messages), embedder)
 
     assert X[0, 388] == 3.0
     assert X[0, 391] > 0.0
@@ -74,7 +71,7 @@ def test_stage2_twitter_uses_raw_message_count_even_with_empty_texts():
         {"text": "", "ts": None, "kind": "tweet"},
     ]
 
-    X = extract_stage2_features_twitter(_df(messages), HashingFakeEmbedder())
+    X = Stage2Extractor("twibot").extract(_df(messages), HashingFakeEmbedder())
 
     assert X[0, 388] == 2.0
     assert X[0, 392] == 0.5

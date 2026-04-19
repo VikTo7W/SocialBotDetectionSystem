@@ -1,10 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from features_stage1_twitter import (
-    STAGE1_TWITTER_COLUMNS,
-    extract_stage1_matrix_twitter,
-)
+from features.stage1 import STAGE1_TWITTER_COLUMNS, Stage1Extractor
 
 
 def _account(
@@ -28,6 +25,7 @@ def _account(
 
 
 def test_stage1_twitter_shape_and_semantic_values():
+    extractor = Stage1Extractor("twibot")
     df = pd.DataFrame([_account(
         screen_name="bot123",
         statuses_count=120,
@@ -43,7 +41,7 @@ def test_stage1_twitter_shape_and_semantic_values():
     )])
 
     reference_time = pd.Timestamp("2012-04-20T00:00:00Z")
-    X = extract_stage1_matrix_twitter(df, reference_time=reference_time)
+    X = extractor.extract(df, reference_time=reference_time)
 
     assert X.shape == (1, len(STAGE1_TWITTER_COLUMNS))
     assert X[0, 0] == 6.0
@@ -60,6 +58,7 @@ def test_stage1_twitter_shape_and_semantic_values():
 
 
 def test_stage1_twitter_zero_tweet_zero_domain_defaults():
+    extractor = Stage1Extractor("twibot")
     df = pd.DataFrame([_account(
         screen_name="plainuser",
         statuses_count=0,
@@ -70,7 +69,7 @@ def test_stage1_twitter_zero_tweet_zero_domain_defaults():
         domain_list=[],
     )])
 
-    X = extract_stage1_matrix_twitter(df, reference_time=pd.Timestamp("2012-04-20T00:00:00Z"))
+    X = extractor.extract(df, reference_time=pd.Timestamp("2012-04-20T00:00:00Z"))
 
     assert X.shape == (1, len(STAGE1_TWITTER_COLUMNS))
     assert np.all(np.isfinite(X))
@@ -83,6 +82,7 @@ def test_stage1_twitter_zero_tweet_zero_domain_defaults():
 
 
 def test_stage1_twitter_rt_heavy_behavior_changes_breakdown():
+    extractor = Stage1Extractor("twibot")
     df = pd.DataFrame([_account(
         messages=[
             {"text": "RT @alice: one", "ts": None, "kind": "tweet"},
@@ -92,7 +92,7 @@ def test_stage1_twitter_rt_heavy_behavior_changes_breakdown():
         ]
     )])
 
-    X = extract_stage1_matrix_twitter(df, reference_time=pd.Timestamp("2012-04-20T00:00:00Z"))
+    X = extractor.extract(df, reference_time=pd.Timestamp("2012-04-20T00:00:00Z"))
 
     assert np.isclose(X[0, 10], 0.75)
     assert np.isclose(X[0, 12], 0.25)
@@ -100,8 +100,9 @@ def test_stage1_twitter_rt_heavy_behavior_changes_breakdown():
 
 
 def test_stage1_twitter_malformed_created_at_falls_back_to_zero_age():
+    extractor = Stage1Extractor("twibot")
     df = pd.DataFrame([_account(created_at="not a real timestamp")])
-    X = extract_stage1_matrix_twitter(df, reference_time=pd.Timestamp("2012-04-20T00:00:00Z"))
+    X = extractor.extract(df, reference_time=pd.Timestamp("2012-04-20T00:00:00Z"))
 
     assert X[0, 6] == 0.0
     assert X[0, 7] == 120.0

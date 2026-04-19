@@ -1,28 +1,20 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Dict, Any, Optional, Tuple, List
+from typing import Dict, Any, Optional, List
 
 import numpy as np
 import pandas as pd
 
+from features_stage1 import extract_stage1_matrix
+from features_stage2 import extract_stage2_features
 from sklearn.base import BaseEstimator
 from sklearn.linear_model import LogisticRegression
 from sklearn.calibration import CalibratedClassifierCV
-from sklearn.model_selection import StratifiedKFold
 from sklearn.covariance import LedoitWolf
-from features_stage1 import extract_stage1_matrix
-from features_stage2 import extract_stage2_features
-try:
-    import torch
-    import torch.nn as nn
-    from torch.nn.utils.rnn import pack_padded_sequence
-    HAS_TORCH = True
-except Exception:
-    torch = None
-    nn = None
-    pack_padded_sequence = None
-    HAS_TORCH = False
+from features.stage2 import Stage2Extractor
+from features.stage3 import build_graph_features_nodeidx
+from sklearn.model_selection import StratifiedKFold
 
 try:
     import lightgbm as lgb
@@ -143,77 +135,11 @@ def extract_amr_embeddings_for_accounts(
     cfg: FeatureConfig,
     embedder: TextEmbedder,
 ) -> np.ndarray:
-    """
-    AMR anchor is the most recent message text (last item in messages list,
-    already sorted temporally by build_account_table). Accounts with no
-    messages receive a zero embedding vector.
-    """
+    from cascade_pipeline import infer_dataset
+
+    dataset = infer_dataset(df, cfg)
     max_chars = cfg.max_chars_per_message if cfg is not None else 500
-    amr_texts = []
-    zero_mask = []
-
-    for _, r in df.iterrows():
-        messages = r.get("messages") or []
-        if messages:
-            anchor = str(messages[-1].get("text") or "")[:max_chars].strip()
-            amr_texts.append(amr_linearize_stub(anchor) if anchor else "")
-            zero_mask.append(not bool(anchor))
-        else:
-            amr_texts.append("")
-            zero_mask.append(True)
-
-    emb = embedder.encode(amr_texts).astype(np.float32)
-    for i, is_zero in enumerate(zero_mask):
-        if is_zero:
-            emb[i] = np.zeros(emb.shape[1], dtype=np.float32)
-    return emb
-
-
-def extract_message_embedding_sequences_for_accounts(
-    df: pd.DataFrame,
-    cfg: FeatureConfig,
-    embedder: TextEmbedder,
-    max_messages: Optional[int] = None,
-) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Build deterministic per-account embedding sequences for an LSTM Stage 2b path.
-
-    Sequences preserve message order, keep the most recent `max_messages` entries,
-    and pad with trailing zero vectors. Accounts with no messages return a zero
-    sequence and length 0.
-    """
-    max_messages = int(max_messages or (cfg.max_messages_per_account if cfg is not None else 50))
-    max_chars = cfg.max_chars_per_message if cfg is not None else 500
-
-    account_texts: List[List[str]] = []
-    flat_texts: List[str] = []
-
-    for _, row in df.iterrows():
-        messages = row.get("messages") or []
-        selected = list(messages[-max_messages:])
-        texts = [str((msg or {}).get("text") or "")[:max_chars].strip() for msg in selected]
-        account_texts.append(texts)
-        flat_texts.extend(texts)
-
-    if flat_texts:
-        flat_embeddings = embedder.encode(flat_texts).astype(np.float32)
-        embedding_dim = int(flat_embeddings.shape[1])
-    else:
-        embedding_dim = int(embedder.encode([""]).shape[1])
-        flat_embeddings = np.zeros((0, embedding_dim), dtype=np.float32)
-
-    sequences = np.zeros((len(account_texts), max_messages, embedding_dim), dtype=np.float32)
-    lengths = np.zeros(len(account_texts), dtype=np.int64)
-
-    cursor = 0
-    for idx, texts in enumerate(account_texts):
-        lengths[idx] = len(texts)
-        for seq_idx, text in enumerate(texts):
-            if text:
-                sequences[idx, seq_idx] = flat_embeddings[cursor]
-            cursor += 1
-
-    return sequences, lengths
+    return Stage2Extractor(dataset).extract_amr(df, embedder, max_chars=max_chars)
 
 
 # -----------------------------
@@ -369,97 +295,6 @@ class AMRDeltaRefiner:
         return np.asarray(z_base, dtype=np.float64) + self.delta(h_amr)
 
 
-class _Stage2LSTMNet(nn.Module):
-    def __init__(self, input_dim: int, hidden_dim: int):
-        super().__init__()
-        self.lstm = nn.LSTM(input_size=input_dim, hidden_size=hidden_dim, batch_first=True)
-        self.head = nn.Linear(hidden_dim, 1)
-
-    def forward(self, sequences: torch.Tensor, lengths: torch.Tensor) -> torch.Tensor:
-        batch_size = int(sequences.shape[0])
-        hidden = self.head.in_features
-        state = sequences.new_zeros((batch_size, hidden))
-
-        positive = lengths > 0
-        if positive.any():
-            seq_pos = sequences[positive]
-            len_pos = lengths[positive].to(dtype=torch.int64, device="cpu")
-            packed = pack_padded_sequence(seq_pos, len_pos, batch_first=True, enforce_sorted=False)
-            _, (hidden_state, _) = self.lstm(packed)
-            state[positive] = hidden_state[-1]
-
-        return self.head(state).squeeze(-1)
-
-
-class Stage2LSTMRefiner:
-    """
-    Parallel Stage 2b variant: sequence model over per-message embeddings that
-    learns a delta on top of Stage 2a logits and preserves the refined z2 role.
-    """
-    def __init__(
-        self,
-        hidden_dim: int = 32,
-        lr: float = 1e-2,
-        epochs: int = 60,
-        l2: float = 1e-4,
-        random_state: int = 42,
-    ):
-        self.hidden_dim = hidden_dim
-        self.lr = lr
-        self.epochs = epochs
-        self.l2 = l2
-        self.random_state = random_state
-        self.model: Optional[_Stage2LSTMNet] = None
-
-    def fit(self, sequences: np.ndarray, lengths: np.ndarray, z_base: np.ndarray, y: np.ndarray) -> "Stage2LSTMRefiner":
-        if not HAS_TORCH:
-            raise RuntimeError("Stage2LSTMRefiner requires torch.")
-
-        seq = np.asarray(sequences, dtype=np.float32)
-        len_arr = np.asarray(lengths, dtype=np.int64)
-        z0 = np.asarray(z_base, dtype=np.float32)
-        y_arr = np.asarray(y, dtype=np.float32)
-
-        torch.manual_seed(self.random_state)
-        try:
-            torch.use_deterministic_algorithms(True, warn_only=True)
-        except Exception:
-            pass
-
-        self.model = _Stage2LSTMNet(input_dim=int(seq.shape[2]), hidden_dim=self.hidden_dim)
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=self.l2)
-        loss_fn = nn.BCEWithLogitsLoss()
-
-        seq_tensor = torch.from_numpy(seq)
-        len_tensor = torch.from_numpy(len_arr)
-        z0_tensor = torch.from_numpy(z0)
-        y_tensor = torch.from_numpy(y_arr)
-
-        self.model.train()
-        for _ in range(self.epochs):
-            optimizer.zero_grad()
-            delta = self.model(seq_tensor, len_tensor)
-            loss = loss_fn(z0_tensor + delta, y_tensor)
-            loss.backward()
-            optimizer.step()
-
-        self.model.eval()
-        return self
-
-    def delta(self, sequences: np.ndarray, lengths: np.ndarray) -> np.ndarray:
-        if self.model is None:
-            raise RuntimeError("Stage2LSTMRefiner not fitted.")
-        seq_tensor = torch.from_numpy(np.asarray(sequences, dtype=np.float32))
-        len_tensor = torch.from_numpy(np.asarray(lengths, dtype=np.int64))
-        self.model.eval()
-        with torch.no_grad():
-            delta = self.model(seq_tensor, len_tensor)
-        return delta.detach().cpu().numpy().astype(np.float64)
-
-    def refine(self, z_base: np.ndarray, sequences: np.ndarray, lengths: np.ndarray) -> np.ndarray:
-        return np.asarray(z_base, dtype=np.float64) + self.delta(sequences, lengths)
-
-
 class Stage3StructuralModel:
     """
     Stage 3: engineered structural features -> calibrated prob + novelty.
@@ -500,55 +335,6 @@ class Stage3StructuralModel:
         u = entropy_from_p(p)
         n = self.novelty.score(X)
         return {"p3": p, "u3": u, "n3": n, "z3": logit(p)}
-
-
-# -----------------------------
-# Structural feature extraction
-# -----------------------------
-
-def build_graph_features_nodeidx(
-    accounts_df: pd.DataFrame,
-    edges_df: pd.DataFrame,
-    num_nodes_total: int,
-    n_types: int = 3
-) -> np.ndarray:
-    node_ids = accounts_df["node_idx"].to_numpy(dtype=np.int32)
-
-    src = edges_df["src"].to_numpy(dtype=np.int32)
-    dst = edges_df["dst"].to_numpy(dtype=np.int32)
-    w   = edges_df["weight"].to_numpy(dtype=np.float32)
-    et  = edges_df["etype"].to_numpy(dtype=np.int8)
-
-    # Global degrees
-    in_deg  = np.zeros(num_nodes_total, dtype=np.float32)
-    out_deg = np.zeros(num_nodes_total, dtype=np.float32)
-    in_w    = np.zeros(num_nodes_total, dtype=np.float32)
-    out_w   = np.zeros(num_nodes_total, dtype=np.float32)
-
-    np.add.at(out_deg, src, 1.0)
-    np.add.at(in_deg,  dst, 1.0)
-    np.add.at(out_w,   src, w)
-    np.add.at(in_w,    dst, w)
-
-    feats = [in_deg, out_deg, in_deg + out_deg, in_w, out_w, in_w + out_w]
-
-    # Per-type degrees/weights
-    for t in range(n_types):
-        mask = (et == t)
-        in_d_t  = np.zeros(num_nodes_total, dtype=np.float32)
-        out_d_t = np.zeros(num_nodes_total, dtype=np.float32)
-        in_w_t  = np.zeros(num_nodes_total, dtype=np.float32)
-        out_w_t = np.zeros(num_nodes_total, dtype=np.float32)
-
-        np.add.at(out_d_t, src[mask], 1.0)
-        np.add.at(in_d_t,  dst[mask], 1.0)
-        np.add.at(out_w_t, src[mask], w[mask])
-        np.add.at(in_w_t,  dst[mask], w[mask])
-
-        feats.extend([in_d_t, out_d_t, in_w_t, out_w_t])
-
-    X_all = np.stack(feats, axis=1)          # [num_nodes_total, D]
-    return X_all[node_ids]                   # [len(accounts_df), D]
 
 
 # -----------------------------
@@ -659,52 +445,6 @@ class TrainedSystem:
 
     stage3: Stage3StructuralModel
     meta123: LogisticRegression
-    stage2b_lstm: Optional[Stage2LSTMRefiner] = None
-    stage2b_variant: str = "amr"
-
-
-def normalize_stage2b_variant(stage2b_variant: str) -> str:
-    variant = str(stage2b_variant or "amr").strip().lower()
-    if variant not in {"amr", "lstm"}:
-        raise ValueError(f"Unknown stage2b variant: {stage2b_variant!r}")
-    return variant
-
-
-def apply_stage2b_refiner(
-    df: pd.DataFrame,
-    cfg: FeatureConfig,
-    embedder: TextEmbedder,
-    z_base: np.ndarray,
-    route_mask: np.ndarray,
-    stage2b_variant: str,
-    amr_refiner: Optional[AMRDeltaRefiner] = None,
-    stage2b_lstm: Optional[Stage2LSTMRefiner] = None,
-) -> np.ndarray:
-    """
-    Apply the configured Stage 2b branch while keeping the surrounding
-    cascade contract shared across variants.
-    """
-    variant = normalize_stage2b_variant(stage2b_variant)
-    z2 = np.asarray(z_base, dtype=np.float64).copy()
-
-    if not route_mask.any():
-        return z2
-
-    routed_df = df.loc[route_mask]
-    routed_z = z2[route_mask]
-
-    if variant == "amr":
-        if amr_refiner is None:
-            raise RuntimeError("Configured Stage 2b variant 'amr' is unavailable.")
-        h_amr = extract_amr_embeddings_for_accounts(routed_df, cfg, embedder)
-        z2[route_mask] = amr_refiner.refine(routed_z, h_amr)
-        return z2
-
-    if stage2b_lstm is None:
-        raise RuntimeError("Configured Stage 2b variant 'lstm' is unavailable.")
-    sequences, lengths = extract_message_embedding_sequences_for_accounts(routed_df, cfg, embedder)
-    z2[route_mask] = stage2b_lstm.refine(routed_z, sequences, lengths)
-    return z2
 
 
 def train_system(
@@ -716,125 +456,20 @@ def train_system(
     th: StageThresholds,
     random_state: int = 42,
     nodes_total: Optional[int] = None,
-    stage2b_variant: str = "amr",
     embedder: Optional[TextEmbedder] = None,
 ) -> TrainedSystem:
-    """
-    Train stage models on S1.
-    Train meta12/meta123 on S2 using OOF meta12 predictions.
-    """
-    stage2b_variant = normalize_stage2b_variant(stage2b_variant)
-    embedder = embedder or TextEmbedder()
+    from cascade_pipeline import CascadePipeline, infer_dataset
 
-    # ---- Stage 1 training on S1
-    print("Stage 1 training on S1")
-    X1_tr = extract_stage1_matrix(S1)
-    y1_tr = S1["label"].to_numpy(dtype=np.int64)
-    stage1 = Stage1MetadataModel(use_isotonic=False, random_state=random_state).fit(X1_tr, y1_tr)
-
-    # ---- Stage 2a training on S1
-    print("Stage 2a training on S1")
-    X2_tr = extract_stage2_features(S1, embedder)
-    stage2a = Stage2BaseContentModel(use_isotonic=False, random_state=random_state).fit(X2_tr, y1_tr)
-
-    # ---- Build Stage outputs on S1 to train AMR refiner (you can restrict to gated subset if you want)
-    out1_S1 = stage1.predict(X1_tr)
-    out2a_S1 = stage2a.predict(X2_tr)
-
-    z2a_S1 = out2a_S1["z2a"]
-
-    amr_refiner: Optional[AMRDeltaRefiner] = None
-    stage2b_lstm: Optional[Stage2LSTMRefiner] = None
-
-    if stage2b_variant == "amr":
-        print("Train AMR delta refiner with offset z2a")
-        h_amr_S1 = extract_amr_embeddings_for_accounts(S1, cfg, embedder)
-        amr_refiner = AMRDeltaRefiner(lr=0.05, epochs=400, l2=1e-3, random_state=random_state)
-        amr_refiner.fit(h_amr_S1, z2a_S1, y1_tr)
-    else:
-        print("Train LSTM Stage 2b refiner with offset z2a")
-        sequences_S1, lengths_S1 = extract_message_embedding_sequences_for_accounts(S1, cfg, embedder)
-        stage2b_lstm = Stage2LSTMRefiner(random_state=random_state)
-        stage2b_lstm.fit(sequences_S1, lengths_S1, z2a_S1, y1_tr)
-
-    # ---- Stage 3 training on S1
-    print("Stage 3 training on S1")
-    X3_tr = build_graph_features_nodeidx(S1, edges_S1, nodes_total)
-    stage3 = Stage3StructuralModel(use_isotonic=False, random_state=random_state).fit(X3_tr, y1_tr)
-
-    # ---- Now build meta training data on S2
-    y2 = S2["label"].to_numpy(dtype=np.int64)
-
-    X1_S2 = extract_stage1_matrix(S2)
-    out1_S2 = stage1.predict(X1_S2)
-
-    X2_S2 = extract_stage2_features(S2, embedder)
-    out2a_S2 = stage2a.predict(X2_S2)
-
-    # AMR gating based on Stage2a uncertainty/novelty/disagreement
-    amr_mask = gate_amr(out2a_S2["p2a"], out2a_S2["n2"], out1_S2["z1"], out2a_S2["z2a"], th)
-
-    # Refine logits where the configured Stage 2b branch is used
-    z2 = apply_stage2b_refiner(
+    dataset = infer_dataset(S1, cfg)
+    pipeline = CascadePipeline(dataset=dataset, cfg=cfg, random_state=random_state, embedder=embedder)
+    return pipeline.fit(
+        S1,
         S2,
-        cfg,
-        embedder,
-        out2a_S2["z2a"],
-        amr_mask,
-        stage2b_variant=stage2b_variant,
-        amr_refiner=amr_refiner,
-        stage2b_lstm=stage2b_lstm,
-    )
-
-    p2 = sigmoid(z2)
-    out2_S2 = {
-        "z2": z2,
-        "p2": p2,
-        "u2": entropy_from_p(p2),
-        "n2": out2a_S2["n2"],  # novelty from base features; you can extend with AMR novelty if you want
-    }
-
-    X_meta12_S2 = build_meta12_table(out1_S2, out2_S2, amr_used=amr_mask.astype(np.float32))
-
-    # OOF p12 predictions for routing Stage3 on S2
-    p12_oof = oof_meta12_predictions(X_meta12_S2, y2, n_splits=5, random_state=random_state)
-
-    # Train final meta12 on all S2 (after you got OOF for routing)
-    print("Train final meta12 on all S2 (after you got OOF for routing)")
-    meta12 = train_meta12(X_meta12_S2, y2)
-
-    # ---- Stage 3 routing on S2 using OOF p12 + novelty safeguards
-    stage3_mask = gate_stage3(p12_oof, out1_S2["n1"], out2_S2["n2"], th)
-
-    X3_S2 = build_graph_features_nodeidx(S2, edges_S2, nodes_total)
-    out3_S2 = {"p3": np.full(len(S2), 0.5, dtype=np.float64),
-               "z3": np.zeros(len(S2), dtype=np.float64),
-               "n3": np.zeros(len(S2), dtype=np.float64)}
-
-    if stage3_mask.any():
-        pred3 = stage3.predict(X3_S2[stage3_mask])
-        out3_S2["p3"][stage3_mask] = pred3["p3"]
-        out3_S2["z3"][stage3_mask] = pred3["z3"]
-        out3_S2["n3"][stage3_mask] = pred3["n3"]
-
-    # ---- meta123 training table (on S2)
-    X_meta123_S2 = pd.DataFrame({
-        "z12": logit(p12_oof),
-        "z3": out3_S2["z3"],
-        "stage3_used": stage3_mask.astype(np.float32),
-        "n1": out1_S2["n1"],
-        "n2": out2_S2["n2"],
-        "n3": out3_S2["n3"],
-    })
-
-    print("Train final meta123 on gated S2 (after you got OOF for routing)")
-    meta123 = train_meta123(X_meta123_S2, y2)
-
-    return TrainedSystem(
-        cfg=cfg, th=th, embedder=embedder,
-        stage1=stage1, stage2a=stage2a, amr_refiner=amr_refiner, meta12=meta12,
-        stage3=stage3, meta123=meta123, stage2b_lstm=stage2b_lstm,
-        stage2b_variant=stage2b_variant,
+        edges_S1,
+        edges_S2,
+        th,
+        nodes_total=nodes_total,
+        embedder=embedder,
     )
 
 
@@ -844,79 +479,8 @@ def predict_system(
     edges_df: pd.DataFrame,
     nodes_total: Optional[int] = None,
 ) -> pd.DataFrame:
-    """
-    Run full inference on a dataset (e.g., S3).
-    Returns per-account probabilities and flags.
-    """
-    cfg, th = sys.cfg, sys.th
+    from cascade_pipeline import CascadePipeline, infer_dataset
 
-    # Stage 1
-    X1 = extract_stage1_matrix(df)
-    out1 = sys.stage1.predict(X1)
-
-    # Stage 2a
-    X2 = extract_stage2_features(df, sys.embedder)
-    out2a = sys.stage2a.predict(X2)
-
-    # AMR gate
-    amr_mask = gate_amr(out2a["p2a"], out2a["n2"], out1["z1"], out2a["z2a"], th)
-
-    # Refine with the configured Stage 2b branch.
-    z2 = apply_stage2b_refiner(
-        df,
-        cfg,
-        sys.embedder,
-        out2a["z2a"],
-        amr_mask,
-        stage2b_variant=sys.stage2b_variant,
-        amr_refiner=sys.amr_refiner,
-        stage2b_lstm=sys.stage2b_lstm,
-    )
-    p2 = sigmoid(z2)
-    out2 = {
-        "z2": z2, "p2": p2, "u2": entropy_from_p(p2), "n2": out2a["n2"]
-    }
-
-    # Meta12
-    X_meta12 = build_meta12_table(out1, out2, amr_used=amr_mask.astype(np.float32))
-    p12 = sys.meta12.predict_proba(X_meta12.to_numpy(dtype=np.float32))[:, 1]
-
-    # Stage 3 gate
-    stage3_mask = gate_stage3(p12, out1["n1"], out2["n2"], th)
-
-    # Stage 3
-    X3 = build_graph_features_nodeidx(df, edges_df, nodes_total)
-    p3 = np.full(len(df), 0.5, dtype=np.float64)
-    z3 = np.zeros(len(df), dtype=np.float64)
-    n3 = np.zeros(len(df), dtype=np.float64)
-
-    if stage3_mask.any():
-        out3 = sys.stage3.predict(X3[stage3_mask])
-        p3[stage3_mask] = out3["p3"]
-        z3[stage3_mask] = out3["z3"]
-        n3[stage3_mask] = out3["n3"]
-
-    # Meta123
-    X_meta123 = pd.DataFrame({
-        "z12": logit(p12),
-        "z3": z3,
-        "stage3_used": stage3_mask.astype(np.float32),
-        "n1": out1["n1"],
-        "n2": out2["n2"],
-        "n3": n3,
-    })
-    p_final = sys.meta123.predict_proba(X_meta123.to_numpy(dtype=np.float32))[:, 1]
-
-    return pd.DataFrame({
-        "account_id": df["account_id"].astype(str).values,
-        "p1": out1["p1"],
-        "n1": out1["n1"],
-        "p2": p2,
-        "n2": out2["n2"],
-        "amr_used": amr_mask.astype(int),
-        "p12": p12,
-        "stage3_used": stage3_mask.astype(int),
-        "p3": p3,
-        "n3": n3,
-        "p_final": p_final,
-    })
+    dataset = infer_dataset(df, sys.cfg)
+    pipeline = CascadePipeline(dataset=dataset, cfg=sys.cfg, embedder=sys.embedder)
+    return pipeline.predict(sys, df, edges_df, nodes_total=nodes_total)

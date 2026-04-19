@@ -1,10 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from features_stage3_twitter import (
-    STAGE3_TWITTER_COLUMNS,
-    extract_stage3_features_twitter,
-)
+from features.stage3 import STAGE3_TWITTER_COLUMNS, Stage3Extractor, build_graph_features_nodeidx
 
 
 def _accounts():
@@ -16,7 +13,7 @@ def _accounts():
 
 
 def test_stage3_twitter_empty_edges_are_zero():
-    X = extract_stage3_features_twitter(_accounts(), pd.DataFrame({
+    X = Stage3Extractor("twibot").extract(_accounts(), pd.DataFrame({
         "src": np.array([], dtype=np.int32),
         "dst": np.array([], dtype=np.int32),
         "etype": np.array([], dtype=np.int8),
@@ -35,7 +32,7 @@ def test_stage3_twitter_following_and_follower_values():
         "weight": np.array([1.0, 2.0], dtype=np.float32),
     })
 
-    X = extract_stage3_features_twitter(_accounts(), edges)
+    X = Stage3Extractor("twibot").extract(_accounts(), edges)
 
     assert X.shape == (3, len(STAGE3_TWITTER_COLUMNS))
     assert X[0, 1] == 1.0
@@ -55,6 +52,6 @@ def test_stage3_twitter_absent_type2_block_stays_zero():
         "weight": np.array([1.0], dtype=np.float32),
     })
 
-    X = extract_stage3_features_twitter(_accounts(), edges)
+    X = Stage3Extractor("twibot").extract(_accounts(), edges)
 
     assert np.allclose(X[:, 14:18], 0.0)

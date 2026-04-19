@@ -27,10 +27,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from features_stage2 import extract_stage2_features
+from features.stage2 import Stage2Extractor
 from botdetector_pipeline import (
     extract_amr_embeddings_for_accounts,
-    extract_message_embedding_sequences_for_accounts,
     FeatureConfig,
 )
 
@@ -96,7 +95,8 @@ def test_no_identity_in_embeddings():
         profile="I am a bot profile",
         messages=[{"text": "hello", "ts": 1700000000.0}],
     )
-    extract_stage2_features(df, rec)
+    extract = Stage2Extractor("botsim").extract
+    extract(df, rec)
 
     flat = " ".join(rec.recorded_texts)
     assert "USERNAME:" not in flat, "Found 'USERNAME:' in encoded texts"
@@ -137,51 +137,6 @@ def test_amr_zero_for_no_messages():
     assert np.allclose(result[0], 0.0), "Zero-message account must yield zero AMR vector"
 
 
-def test_lstm_sequence_zero_for_no_messages():
-    """LSTM sequence helper must return zero-padded output and length 0 for empty histories."""
-    rec = RecordingEmbedder()
-    df = _make_single_account_df(messages=[])
-    cfg = FeatureConfig(stage1_numeric_cols=[], max_messages_per_account=3)
-
-    sequences, lengths = extract_message_embedding_sequences_for_accounts(df, cfg, rec, max_messages=3)
-
-    assert sequences.shape == (1, 3, 384)
-    assert lengths.tolist() == [0]
-    assert np.allclose(sequences[0], 0.0), "Empty-history account must yield all-zero sequence rows"
-
-
-def test_lstm_sequence_preserves_order_and_truncates_to_recent_messages():
-    """LSTM sequence helper must preserve order within the retained recent-message window."""
-    rec = RecordingEmbedder()
-    messages = [
-        {"text": "oldest", "ts": 1.0},
-        {"text": "middle", "ts": 2.0},
-        {"text": "newest", "ts": 3.0},
-    ]
-    df = _make_single_account_df(messages=messages)
-    cfg = FeatureConfig(stage1_numeric_cols=[], max_messages_per_account=2)
-
-    sequences, lengths = extract_message_embedding_sequences_for_accounts(df, cfg, rec, max_messages=2)
-
-    assert sequences.shape == (1, 2, 384)
-    assert lengths.tolist() == [2]
-    assert rec.recorded_texts == ["middle", "newest"], "Sequence truncation must keep the most recent messages in order"
-
-
-def test_lstm_sequence_short_history_uses_trailing_zero_padding():
-    """Short histories must remain shape-stable and use zero padding for unused time steps."""
-    rec = RecordingEmbedder()
-    messages = [{"text": "only one", "ts": 1.0}]
-    df = _make_single_account_df(messages=messages)
-    cfg = FeatureConfig(stage1_numeric_cols=[], max_messages_per_account=3)
-
-    sequences, lengths = extract_message_embedding_sequences_for_accounts(df, cfg, rec, max_messages=3)
-
-    assert lengths.tolist() == [1]
-    assert not np.allclose(sequences[0, 0], 0.0), "The retained message slot should contain an embedding"
-    assert np.allclose(sequences[0, 1:], 0.0), "Unused sequence slots must be zero padded"
-
-
 # ---------------------------------------------------------------------------
 # FEAT-01: CoV of inter-post intervals (index 391)
 # ---------------------------------------------------------------------------
@@ -190,7 +145,7 @@ def test_feat01_default_zero():
     """cv_intervals must be 0.0 when account has 0 messages."""
     rec = RecordingEmbedder()
     df = _make_single_account_df(messages=[])
-    feat = extract_stage2_features(df, rec)
+    feat = Stage2Extractor("botsim").extract(df, rec)
     assert feat.shape == (1, 397), f"Expected (1, 397), got {feat.shape}"
     assert feat[0, 391] == 0.0, "cv_intervals must be 0.0 for 0-message account"
 
@@ -205,7 +160,7 @@ def test_feat01_formula():
         {"text": "msg3", "ts": 7200.0},
     ]
     df = _make_single_account_df(messages=messages)
-    feat = extract_stage2_features(df, rec)
+    feat = Stage2Extractor("botsim").extract(df, rec)
     deltas = np.array([3600.0, 3600.0])
     delta_mean = float(np.mean(deltas))
     delta_std = float(np.std(deltas))
@@ -223,7 +178,7 @@ def test_feat02_default_zero():
     """char_len_mean and char_len_std must be 0.0 for 0-message account."""
     rec = RecordingEmbedder()
     df = _make_single_account_df(messages=[])
-    feat = extract_stage2_features(df, rec)
+    feat = Stage2Extractor("botsim").extract(df, rec)
     assert feat[0, 392] == 0.0, "char_len_mean must be 0.0 for 0 messages"
     assert feat[0, 393] == 0.0, "char_len_std must be 0.0 for 0 messages"
 
@@ -237,7 +192,7 @@ def test_feat02_values():
         {"text": "cc", "ts": 7200.0},
     ]
     df = _make_single_account_df(messages=messages)
-    feat = extract_stage2_features(df, rec)
+    feat = Stage2Extractor("botsim").extract(df, rec)
     lens = [3, 6, 2]
     expected_mean = float(np.mean(lens))
     expected_std = float(np.std(lens))
@@ -257,12 +212,12 @@ def test_feat03_default_zero():
     """hour_entropy must be 0.0 for accounts with 0 or 1 timestamp."""
     rec = RecordingEmbedder()
     df = _make_single_account_df(messages=[])
-    feat = extract_stage2_features(df, rec)
+    feat = Stage2Extractor("botsim").extract(df, rec)
     assert feat[0, 394] == 0.0, "hour_entropy must be 0.0 for 0 messages"
 
     # Also test single message
     df1 = _make_single_account_df(messages=[{"text": "hi", "ts": 1700000000.0}])
-    feat1 = extract_stage2_features(df1, rec)
+    feat1 = Stage2Extractor("botsim").extract(df1, rec)
     assert feat1[0, 394] == 0.0, "hour_entropy must be 0.0 for single message"
 
 
@@ -275,7 +230,7 @@ def test_missing_timestamps_use_sentinel_values():
             {"text": "msg2", "ts": None},
         ]
     )
-    feat = extract_stage2_features(df, rec)
+    feat = Stage2Extractor("botsim").extract(df, rec)
 
     assert feat[0, 388] == -1.0, "rate should use missing-timestamp sentinel"
     assert feat[0, 389] == -1.0, "delta_mean should use missing-timestamp sentinel"
@@ -302,7 +257,7 @@ def test_feat03_entropy_value():
     messages = [{"text": f"msg{i}", "ts": ts} for i, ts in enumerate(timestamps)]
 
     df = _make_single_account_df(messages=messages)
-    feat = extract_stage2_features(df, rec)
+    feat = Stage2Extractor("botsim").extract(df, rec)
 
     # Expected: hours = [0, 6, 12, 18], uniform distribution -> entropy = log2(4) = 2.0
     hours = [datetime.utcfromtimestamp(t).hour for t in timestamps]
@@ -326,13 +281,13 @@ def test_feat04_default_zero():
 
     # 0-message account
     df0 = _make_single_account_df(messages=[])
-    feat0 = extract_stage2_features(df0, rec)
+    feat0 = Stage2Extractor("botsim").extract(df0, rec)
     assert feat0[0, 395] == 0.0, "cross_msg_sim_mean must be 0.0 for 0-message account"
     assert feat0[0, 396] == 0.0, "near_dup_frac must be 0.0 for 0-message account"
 
     # 1-message account
     df1 = _make_single_account_df(messages=[{"text": "only message", "ts": 1700000000.0}])
-    feat1 = extract_stage2_features(df1, rec)
+    feat1 = Stage2Extractor("botsim").extract(df1, rec)
     assert feat1[0, 395] == 0.0, "cross_msg_sim_mean must be 0.0 for 1-message account"
     assert feat1[0, 396] == 0.0, "near_dup_frac must be 0.0 for 1-message account"
 
@@ -344,7 +299,7 @@ def test_feat04_sim_mean():
     messages = [{"text": t, "ts": float(1700000000 + i * 3600)} for i, t in enumerate(texts)]
     df = _make_single_account_df(messages=messages)
 
-    feat = extract_stage2_features(df, norm_emb)
+    feat = Stage2Extractor("botsim").extract(df, norm_emb)
 
     # Compute expected value manually using the same embedder
     emb = NormalizedFakeEmbedder().encode(texts)
@@ -366,7 +321,7 @@ def test_feat04_near_dup():
     messages = [{"text": t, "ts": float(1700000000 + i * 3600)} for i, t in enumerate(texts)]
     df = _make_single_account_df(messages=messages)
 
-    feat = extract_stage2_features(df, norm_emb)
+    feat = Stage2Extractor("botsim").extract(df, norm_emb)
 
     # Compute expected value manually
     emb = NormalizedFakeEmbedder().encode(texts)

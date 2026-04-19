@@ -25,7 +25,6 @@ from botdetector_pipeline import (
     Stage1MetadataModel,
     Stage2BaseContentModel,
     AMRDeltaRefiner,
-    Stage2LSTMRefiner,
     Stage3StructuralModel,
     train_meta12,
     train_meta123,
@@ -37,7 +36,6 @@ from botdetector_pipeline import (
     logit,
     sigmoid,
     entropy_from_p,
-    extract_message_embedding_sequences_for_accounts,
 )
 from features_stage1 import extract_stage1_matrix
 from features_stage2 import extract_stage2_features
@@ -128,7 +126,7 @@ def _make_synthetic_edges(rng: np.random.RandomState, n_nodes: int = 50) -> pd.D
 
 
 @pytest.fixture
-def minimal_system(monkeypatch):
+def minimal_system():
     """
     Build a minimal TrainedSystem from 50-account synthetic data.
 
@@ -141,9 +139,6 @@ def minimal_system(monkeypatch):
 
     Notes:
         - Uses FakeEmbedder to avoid loading sentence-transformers (90MB model)
-        - Monkeypatches botdetector_pipeline.extract_stage1_matrix and
-          extract_stage2_features to handle predict_system's broken calling
-          convention (passes cfg as 2nd arg, embedder as 3rd arg)
         - All random data generated with np.random.RandomState(42)
     """
     rng = np.random.RandomState(42)
@@ -154,25 +149,6 @@ def minimal_system(monkeypatch):
     S2 = _make_synthetic_dataframe(rng)
     edges_S2 = _make_synthetic_edges(rng, n_nodes=nodes_total)
     y = S2["label"].to_numpy(dtype=np.int64)
-
-    # Monkeypatch to handle predict_system's calling convention:
-    # predict_system calls: extract_stage1_matrix(df, cfg)
-    # Real signature:       extract_stage1_matrix(df)
-    def patched_extract_stage1_matrix(df, *args, **kwargs):
-        return extract_stage1_matrix(df)
-
-    # predict_system calls: extract_stage2_features(df, cfg, sys.embedder)
-    # Real signature:       extract_stage2_features(df, embedder, max_msgs, max_chars)
-    # cfg gets passed as embedder position; sys.embedder as max_msgs position
-    # We find the real embedder by checking for an 'encode' method.
-    def patched_extract_stage2_features(df, *args, **kwargs):
-        for a in args:
-            if hasattr(a, "encode"):
-                return extract_stage2_features(df, a)
-        return extract_stage2_features(df, fake_embedder)
-
-    monkeypatch.setattr(bp, "extract_stage1_matrix", patched_extract_stage1_matrix)
-    monkeypatch.setattr(bp, "extract_stage2_features", patched_extract_stage2_features)
 
     # ---- Extract features using real functions (not patched versions) ----
     X1 = extract_stage1_matrix(S2)
@@ -266,33 +242,6 @@ def minimal_system(monkeypatch):
     )
 
     return (system, S2, edges_S2, nodes_total)
-
-
-@pytest.fixture
-def minimal_lstm_stage2b_inputs(minimal_system):
-    """
-    Return deterministic sequence-model inputs for the Stage 2b LSTM prototype.
-    """
-    system, S2, edges_S2, nodes_total = minimal_system
-    cfg = FeatureConfig(stage1_numeric_cols=[], max_messages_per_account=4)
-    sequences, lengths = extract_message_embedding_sequences_for_accounts(S2, cfg, system.embedder, max_messages=4)
-    X2 = extract_stage2_features(S2, system.embedder)
-    z_base = system.stage2a.predict(X2)["z2a"]
-    y = S2["label"].to_numpy(dtype=np.int64)
-    return {
-        "system": system,
-        "S2": S2,
-        "edges_S2": edges_S2,
-        "nodes_total": nodes_total,
-        "cfg": cfg,
-        "sequences": sequences,
-        "lengths": lengths,
-        "z_base": z_base,
-        "y": y,
-        "refiner_class": Stage2LSTMRefiner,
-    }
-
-
 @pytest.fixture
 def synthetic_training_split():
     """
