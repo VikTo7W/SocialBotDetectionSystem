@@ -12,11 +12,11 @@ Refactor the full system into a single parameterized codebase shared across BotS
 
 ### Shared Core Infrastructure
 
-- [ ] **CORE-01**: A dataset parameter (`botsim` / `twibot`) controls which feature extractors, data loaders, and split logic are used throughout the pipeline — no dataset-specific branches embedded in shared code
-- [ ] **CORE-02**: All feature extractor classes live in one module (`features/`), with Stage 1, 2a, 2b, and 3 extractors accepting a dataset parameter
-- [ ] **CORE-03**: The cascade training pipeline (OOF stacking, meta-learner fitting, threshold calibration) is implemented once and invoked by both training entry points
-- [ ] **CORE-04**: Bayesian threshold calibration runs a single trial for both systems (no multi-restart loop)
-- [ ] **CORE-05**: Stage 2b retains only the AMR embedding delta-logit path; the LSTM path is removed entirely
+- [x] **CORE-01**: A dataset parameter (`botsim` / `twibot`) controls which feature extractors, data loaders, and split logic are used throughout the pipeline - no dataset-specific branches embedded in shared code
+- [x] **CORE-02**: All feature extractor classes live in one module (`features/`), with Stage 1, 2a, 2b, and 3 extractors accepting a dataset parameter
+- [x] **CORE-03**: The cascade training pipeline (OOF stacking, meta-learner fitting, threshold calibration) is implemented once and invoked by both training entry points
+- [x] **CORE-04**: Bayesian threshold calibration runs a single trial for both systems (no multi-restart loop)
+- [x] **CORE-05**: Stage 2b retains only the AMR embedding delta-logit path; the LSTM path is removed entirely
 
 ### Training Entry Points
 
@@ -37,8 +37,8 @@ Refactor the full system into a single parameterized codebase shared across BotS
 
 ### Code Quality
 
-- [ ] **QUAL-01**: Each logical component (data loading, feature extraction per stage, cascade pipeline, evaluation) is organized into classes with methods, not loose functions or procedural scripts
-- [ ] **QUAL-02**: Comments are non-AI-style: lowercase, explaining the *why* not the *what*, and used sparingly
+- [x] **QUAL-01**: Each logical component (data loading, feature extraction per stage, cascade pipeline, evaluation) is organized into classes with methods, not loose functions or procedural scripts
+- [x] **QUAL-02**: Comments are non-AI-style: lowercase, explaining the *why* not the *what*, and used sparingly
 
 ### Documentation
 
@@ -60,7 +60,7 @@ Refactor the full system into a single parameterized codebase shared across BotS
 | Frontend or dashboard UI | API and scripts only |
 | Model retraining through the API | Offline training only |
 | Profile or description features | Permanently excluded after leakage audit |
-| LSTM Stage 2b path | Removed in v1.5 — AMR embedding version only |
+| LSTM Stage 2b path | Removed in v1.5 - AMR embedding version only |
 | Online novelty recalibration in maintained path | Removed in v1.4 |
 | Multi-trial Bayesian calibration | Single trial produces identical results |
 
@@ -68,13 +68,13 @@ Refactor the full system into a single parameterized codebase shared across BotS
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| CORE-01 | Phase 17 | Pending |
-| CORE-02 | Phase 17 | Pending |
-| CORE-05 | Phase 17 | Pending |
-| CORE-03 | Phase 18 | Pending |
-| CORE-04 | Phase 18 | Pending |
-| QUAL-01 | Phase 18 | Pending |
-| QUAL-02 | Phase 18 | Pending |
+| CORE-01 | Phase 17 | Complete |
+| CORE-02 | Phase 17 | Complete |
+| CORE-05 | Phase 17 | Complete |
+| CORE-03 | Phase 18 | Complete |
+| CORE-04 | Phase 18 | Complete |
+| QUAL-01 | Phase 18 | Complete |
+| QUAL-02 | Phase 18 | Complete |
 | TRAIN-01 | Phase 19 | Pending |
 | TRAIN-02 | Phase 19 | Pending |
 | EVAL-01 | Phase 20 | Pending |

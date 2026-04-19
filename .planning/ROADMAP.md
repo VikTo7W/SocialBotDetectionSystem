@@ -60,8 +60,8 @@
 <details open>
 <summary>[ ] v1.5 Unified Modular Codebase (Phases 17-21) - ACTIVE</summary>
 
-- [ ] **Phase 17: Shared Feature Extraction Module** - Unify all feature extractor classes into a single dataset-parameterized module, removing duplication across Reddit and TwiBot codebases
-- [ ] **Phase 18: Unified Cascade Pipeline and Calibration** - Implement the cascade training pipeline once (OOF stacking, meta-learner fitting, single-trial Bayesian calibration) with object-oriented structure
+- [x] **Phase 17: Shared Feature Extraction Module** - Unify all feature extractor classes into a single dataset-parameterized module, removing duplication across Reddit and TwiBot codebases
+- [x] **Phase 18: Unified Cascade Pipeline and Calibration** - Implement the cascade training pipeline once (OOF stacking, meta-learner fitting, single-trial Bayesian calibration) with object-oriented structure
 - [ ] **Phase 19: Training Entry Points and Fresh Model Retraining** - Build clean train_botsim.py and train_twibot.py entry points and retrain both cascade artifacts from the unified code
 - [ ] **Phase 20: Evaluation Entry Points and Paper Outputs** - Build three clean evaluation entry points and regenerate all paper-facing outputs (confusion matrices, routing stats, metric tables, Table 5)
 - [ ] **Phase 21: Documentation** - Write a comprehensive README covering system architecture, technique rationale, feature-stage mapping, and full reproduction guide
@@ -127,7 +127,15 @@ Plans:
   2. All Stage 1, 2a, 2b, and 3 extractor classes live under features/ and accept the dataset parameter
   3. Stage 2b exposes only the AMR embedding delta-logit path; no LSTM class, method, or code path remains in the module
   4. The features/ module can be imported and the extractors instantiated for both datasets without importing unrelated pipeline code
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [x] 17-01-PLAN.md - Create Wave 0 red test scaffolding, remove LSTM fixtures from shared tests, and retarget extractor tests to the future shared module surface (CORE-01, CORE-02, CORE-05)
+- [x] 17-02-PLAN.md - Build the shared Stage 1 extractor and unified `data_io.load_dataset()` dispatch in the new package surface (CORE-01, CORE-02)
+- [x] 17-03-PLAN.md - Build the shared Stage 2 extractor and AMR embedding extraction surface for botsim and twibot contracts (CORE-02)
+- [x] 17-04-PLAN.md - Build the shared Stage 3 extractor, relocate graph feature extraction, and align Stage 3 tests to the new module (CORE-02)
+- [x] 17-05-PLAN.md - Remove the LSTM Stage 2b path and simplify the maintained pipeline contract to AMR-only (CORE-05)
+- [x] 17-06-PLAN.md - Add compatibility shims for legacy feature imports and run whole-phase verification for the shared extraction refactor (CORE-01, CORE-02, CORE-05)
+**Completed**: 2026-04-19
 **UI hint**: no
 
 ### Phase 18: Unified Cascade Pipeline and Calibration
@@ -139,7 +147,13 @@ Plans:
   2. Bayesian threshold calibration runs exactly one trial for both systems; any previous multi-restart loop is removed
   3. Pipeline code is organized into classes with methods (data loading, feature extraction per stage, cascade pipeline, evaluation); no loose top-level procedural scripts
   4. Code comments are lowercase, explain the why rather than the what, and are used sparingly — no AI-style block commentary
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [x] 18-01-PLAN.md - Create the red-test safety net for shared pipeline orchestration and the maintained single-trial calibration contract (CORE-03, CORE-04, QUAL-01)
+- [x] 18-02-PLAN.md - Build the shared dataset-aware cascade pipeline layer and demote `botdetector_pipeline.py` to stage-model/compatibility responsibilities (CORE-03, QUAL-01, QUAL-02)
+- [x] 18-03-PLAN.md - Simplify maintained calibration to a stable single-trial contract and update calibration evidence/reporting tests (CORE-04, QUAL-01)
+- [x] 18-04-PLAN.md - Migrate current BotSim/TwiBot training callers onto the shared core and run phase-level verification (CORE-03, CORE-04, QUAL-02)
+**Completed**: 2026-04-19
 **UI hint**: no
 
 ### Phase 19: Training Entry Points and Fresh Model Retraining
@@ -151,7 +165,12 @@ Plans:
   2. Running train_twibot.py completes a full TwiBot-20 cascade training from train.json and writes trained_system_twibot.joblib without touching any BotSim artifact
   3. Both artifacts are produced by the unified pipeline code (Phase 18), not by any legacy separate training scripts
   4. Both training runs complete reproducibly with SEED=42 and produce artifacts that load without error
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [x] 19-01-PLAN.md - Create the red-test safety net for the maintained training entry-point names, artifact defaults, and isolation guarantees (TRAIN-01, TRAIN-02)
+- [x] 19-02-PLAN.md - Build `train_botsim.py` as the maintained BotSim training path and demote `main.py` to compatibility-only responsibilities (TRAIN-01)
+- [x] 19-03-PLAN.md - Build `train_twibot.py` as the maintained TwiBot training path and align native evaluation with the renamed artifact contract (TRAIN-02)
+- [x] 19-04-PLAN.md - Run the new maintained training entry points, generate fresh artifacts, and verify the unified training surface end-to-end (TRAIN-01, TRAIN-02)
 **UI hint**: no
 
 ### Phase 20: Evaluation Entry Points and Paper Outputs
@@ -198,8 +217,8 @@ Plans:
 | 14. Twitter-Native Feature Pipeline | v1.4 | 3/3 | Complete | 2026-04-18 |
 | 15. TwiBot Cascade Training and Evaluation | v1.4 | 2/2 | Complete | 2026-04-18 |
 | 16. Comparative Paper Outputs and Reddit Cleanup | v1.4 | 3/3 | Complete | 2026-04-18 |
-| 17. Shared Feature Extraction Module | v1.5 | 0/? | Not started | - |
-| 18. Unified Cascade Pipeline and Calibration | v1.5 | 0/? | Not started | - |
-| 19. Training Entry Points and Fresh Model Retraining | v1.5 | 0/? | Not started | - |
+| 17. Shared Feature Extraction Module | v1.5 | 6/6 | Complete | 2026-04-19 |
+| 18. Unified Cascade Pipeline and Calibration | v1.5 | 4/4 | Complete | 2026-04-19 |
+| 19. Training Entry Points and Fresh Model Retraining | v1.5 | 0/4 | Planned | - |
 | 20. Evaluation Entry Points and Paper Outputs | v1.5 | 0/? | Not started | - |
 | 21. Documentation | v1.5 | 0/? | Not started | - |

@@ -28,7 +28,7 @@ v1.5 delivers a unified modular codebase parameterized by dataset, LSTM Stage 2b
 
 ## Current State
 
-v1.5 in progress (started 2026-04-18). v1.4 shipped two separate cascade systems (Reddit-trained and TwiBot-native) with duplicated feature extraction and training code across multiple files. v1.5 will unify these into a single parameterized codebase, remove the LSTM Stage 2b path, reduce calibration to one trial, and retrain both systems from the unified code.
+v1.5 in progress (started 2026-04-18). Phases 17 and 18 are complete: the codebase now has shared dataset-parameterized feature extraction plus a shared `CascadePipeline` orchestration layer with maintained single-trial calibration. Remaining work is focused on clean entry points, fresh retraining, unified evaluation scripts, and documentation.
 
 Known gaps carried forward:
 - Full pytest green-suite is still blocked in this Windows workspace by temp-dir cleanup permissions
@@ -70,7 +70,7 @@ The cascade must produce a single, well-calibrated bot probability per account w
 ### Active
 
 - Unified dataset-parameterized feature extraction shared across BotSim-24 and TwiBot-20 - v1.5
-- Unified cascade training with 2 entry points (train_botsim.py, train_twibot.py) - v1.5
+- Unified cascade training core shared across maintained callers - v1.5
 - Stage 2b LSTM path removed; AMR embedding delta-logit version only - v1.5
 - Single-trial Bayesian threshold calibration for both systems - v1.5
 - 3 evaluation entry points: Reddit-native, Reddit→TwiBot transfer, TwiBot-native - v1.5
@@ -93,7 +93,7 @@ The cascade must produce a single, well-calibrated bot probability per account w
 
 - **Dataset:** BotSim-24 provides Reddit metadata, timelines, and graph tensors. TwiBot-20 provides Twitter metadata, tweet timelines, and follower/following neighbor lists with canonical train/val/test splits.
 - **Architecture:** Three-stage cascade with novelty-aware gating and logistic-regression stackers.
-- **Current state:** `trained_system_v12.joblib` is the active Reddit-trained model. `trained_system_twibot20.joblib` is the separate TwiBot-native artifact.
+- **Current state:** `trained_system_v12.joblib` is the active Reddit-trained model. `trained_system_twibot20.joblib` is the separate TwiBot-native artifact. Phase 17 has landed the shared `features/` package and removed the maintained LSTM Stage 2b path.
 - **AMR status:** The Stage 2b semantic path is still an embedding-based proxy, not true AMR graph parsing.
 - **Paper contribution:** The novel contribution is the cascade architecture. v1.4 strengthens the paper by showing the cascade works when platform-matched and remains weak under Reddit-trained zero-shot transfer.
 
@@ -113,7 +113,7 @@ The cascade must produce a single, well-calibrated bot probability per account w
 | AMR as delta-logit updater | Preserves AMR as incremental evidence instead of a second full classifier | Good |
 | Mahalanobis distance for novelty | Analytically grounded OOD signal without extra model training | Good |
 | Logistic regression for meta-learners | Interpretable and resistant to overfitting on the small stacking set | Good |
-| Bayesian optimization for thresholds | More sample-efficient than grid search and compatible with current environment | Working |
+| Bayesian optimization for thresholds | More sample-efficient than grid search and compatible with current environment | Simplified to one maintained trial in v1.5 |
 | S1/S2/S3 split discipline | Prevents leakage during training and evaluation | Good |
 | Preserve v11 alongside v12 | Needed for leakage-audit and ablation comparisons | Good |
 | Missingness-aware handling was acceptable as an interim transfer bridge | Avoided fake in-distribution signals before the native feature rewrite | Adopted in v1.2 |
@@ -122,4 +122,4 @@ The cascade must produce a single, well-calibrated bot probability per account w
 | Online novelty recalibration is historical only after v1.4 | It did not materially improve TwiBot transfer performance and complicated the maintained story | Adopted |
 
 ---
-*Last updated: 2026-04-18 - v1.5 milestone started (Unified Modular Codebase)*
+*Last updated: 2026-04-19 - Phase 18 completed (Unified Cascade Pipeline and Calibration)*

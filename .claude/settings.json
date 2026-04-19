@@ -18,7 +18,15 @@
       "Skill(gsd-verify-work)",
       "Skill(gsd-verify-work:*)",
       "Read(//c/Users/dzeni/.claude/get-shit-done/workflows/**)",
-      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs commit 'docs: start milestone v1.4 Twitter-Native Supervised Baseline' --files .planning/PROJECT.md .planning/STATE.md)"
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs commit 'docs: start milestone v1.4 Twitter-Native Supervised Baseline' --files .planning/PROJECT.md .planning/STATE.md)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs commit 'docs: start milestone v1.5 Unified Modular Codebase' --files .planning/PROJECT.md .planning/STATE.md)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs init new-milestone)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs commit 'docs: define milestone v1.5 requirements' --files .planning/REQUIREMENTS.md)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs commit 'docs: create milestone v1.5 roadmap \\(5 phases\\)' --files .planning/ROADMAP.md .planning/STATE.md .planning/REQUIREMENTS.md)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs init phase-op 17)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs commit 'docs\\(17\\): research phase domain' --files .planning/phases/17-shared-feature-extraction-module/17-RESEARCH.md)",
+      "Read(//c/Users/dzeni/.claude/get-shit-done/templates/**)",
+      "Bash(node __TRACKED_VAR__/.claude/get-shit-done/bin/gsd-tools.cjs init plan-phase 17)"
     ]
   }
 }
