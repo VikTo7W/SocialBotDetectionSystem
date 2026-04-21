@@ -1,0 +1,45 @@
+{
+  "alternatives": [],
+  "executed_trials": 1,
+  "metric": "f1",
+  "plateau_patience": 1,
+  "requested_trials": 1,
+  "selected_trial": {
+    "amr_usage_rate": 1.0,
+    "positive_predictions": 1445,
+    "primary_score": 0.8064046579330422,
+    "rank": 1,
+    "secondary_brier": 0.15129921843243418,
+    "secondary_log_loss": 0.45877597771076545,
+    "stage3_usage_rate": 0.9678646934460888,
+    "thresholds": {
+      "disagreement_trigger": 4.0,
+      "n1_max_for_exit": 3.0,
+      "n2_trigger": 3.0,
+      "novelty_force_stage3": 3.5,
+      "s12_bot": 0.98,
+      "s12_human": 0.02,
+      "s1_bot": 0.98,
+      "s1_human": 0.02,
+      "s2a_bot": 0.95,
+      "s2a_human": 0.05
+    },
+    "trial_number": 0
+  },
+  "selection_policy": {
+    "plateau_guardrail": "not_applicable_single_trial",
+    "primary_metric": "f1",
+    "secondary_metrics": [
+      "secondary_log_loss",
+      "secondary_brier"
+    ],
+    "strategy": "single_trial"
+  },
+  "stopped_early": false,
+  "tie_analysis": {
+    "best_primary_score": 0.8064046579330422,
+    "best_tie_count": 1,
+    "same_hard_predictions": true,
+    "same_routing": true
+  }
+}

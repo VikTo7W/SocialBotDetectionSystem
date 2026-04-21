@@ -37,10 +37,10 @@ _PROTECTED_MODEL_ARTIFACTS = {
     "trained_system_stage2b_lstm.joblib",
 }
 
-os.environ.setdefault("LOKY_MAX_CPU_COUNT", "1")
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("LOKY_MAX_CPU_COUNT", "8")
+os.environ.setdefault("OMP_NUM_THREADS", "4")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "4")
+os.environ.setdefault("MKL_NUM_THREADS", "4")
 
 
 def _load_raw_records(path: str) -> list[dict]:

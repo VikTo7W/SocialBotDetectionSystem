@@ -104,3 +104,7 @@ def predict(req: AccountRequest, request: Request):
         raise HTTPException(status_code=422, detail=str(exc))
     p_final = float(result["p_final"].iloc[0])
     return PredictResponse(p_final=p_final, label=int(p_final >= 0.5))
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
